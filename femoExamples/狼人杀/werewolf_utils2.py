@@ -23,7 +23,7 @@ def get_speaker_order_from_start(candidates, start):
     从start开始，返回candidates的循环发言顺序。
     candidates: list 上警玩家
     start: str 起始玩家名
-    返回list
+    无人上警（candidates 为空）时返回空列表——后续 for/par 零执行直接穿出。
     """
     if not candidates:
         return []
@@ -35,11 +35,24 @@ def get_speaker_order_from_start(candidates, start):
 def get_sheriff_voter_order(alive, candidates):
     """
     返回未上警的存活玩家列表（警下投票者）。
-    alive: list 所有存活玩家
-    candidates: list 上警玩家
-    返回list
+    无人上警时返回空列表——没有竞选就没有投票，直接穿出到结算。
     """
+    if not candidates:
+        return []
     return [p for p in alive if p not in candidates]
+
+def collect_candidacy(candidates, player_name, want):
+    """把上警意愿写进共享名单（就地修改，返回同一对象供 out 写回）。
+    $sheriff_candidates 是全局一份的 shared 变量：par 并发分支各自写
+    不同的追加（list.append GIL 原子），互不覆盖。want 非真 = 不上警。"""
+    player_name = _as_name(player_name)
+    if isinstance(want, str):
+        truthy = want.strip().lower() in ("true", "1", "yes", "y", "是", "上", "上警")
+    else:
+        truthy = bool(want)
+    if player_name and truthy and player_name not in (candidates or []):
+        candidates.append(player_name)
+    return candidates
 
 def process_election_votes(votes, candidates, alive):
     """
@@ -223,7 +236,7 @@ def collect_vote(votes, voter_name, target):
 def process_votes_and_end(votes, alive_players, roles_dict, wolves, sheriff):
     """计票 -> 放逐 -> 判胜负（屠边制）。
 
-    普通玩家投票权重为1，警长投票权重为2。
+    普通玩家投票权重为1，警长投票权重为1.5。
     只统计投给存活玩家的票；空串/场外名字视为弃票。
     平票=无人出局。
     不清空票箱：announce_vote 还要念票，次日由 DayPhase.init 清空。

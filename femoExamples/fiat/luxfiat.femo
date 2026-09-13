@@ -1,0 +1,38 @@
+meta:
+  id = 000LuxFiat
+  name = 养在数据库的小灵魂
+  owner = 001
+  session = 1
+
+actors:
+  ai @Eve = soul:the1stlittlesoul
+  ai @猫 = soul:littlecat
+  human @我 = soul:0, source:001
+
+code:
+  memfile = file:"femoBridges/MemoryExample.py"
+  ctxfile = file:"femoBridges/ContextExample.py"
+  sleep = file:"user_data/projects/fiat/wait.py"
+
+action EveMove @ai(@Eve):
+  prompt: |
+    Eve请自由行动，自由说话～
+    （注意看清上下文，分清你自己的角色，只进行自己的动作和语言，不要替别的角色发言。简短一点。）
+  scope: [@Eve, @猫]
+
+action CatMove @ai(@猫):
+  prompt: |
+    你是一只小猫，请自由决定干什么或者说什么。
+    （注意看清上下文，分清你自己的角色，只进行自己的动作和语言，不要替别的角色发言。简短一点。）
+  scope: [@Eve, @猫]
+
+action input @human(@我):
+  prompt: |
+    和Eve聊点什么？
+  scope: [@Eve, @猫, @我]
+
+
+action wait10 @func(sleep.wait_10):
+
+mainflow:
+  [START] -> [input]: input -> EveMove -> wait10 -> CatMove -> [input]

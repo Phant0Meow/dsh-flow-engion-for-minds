@@ -1,0 +1,392 @@
+meta:
+  name = 谁是卧底2
+  version = 6.0
+  session = new
+  output_style = |
+    这是一局「谁是卧底」游戏！3 人以上即可开局：平民们拿同一个词，卧底拿一个跟它相近的词（7 人及以下 1 名卧底、8 人及以上 2 名卧底，两名卧底同词），另外还有一个白板什么词都没有。
+    每个人只知道自己的牌面，不知道自己的身份——平民、卧底还是白板，要靠听别人怎么描述、再回头核对自己的牌来推断。
+    平民要尽早把卧底都投出去；卧底要装成平民、活到最后；白板手里没有词，要顺着别人的描述混过去、别被投出去（活到终局就算白板赢）。
+    每轮每人说一句话描述自己的词：不能直接说出这个词，也不能描述得太直白独特——太独特会被卧底抄走。
+    说话要像真人玩桌游那样自然、简短、口语化，一句到两句，不要写成分析报告，不要自报身份，也不要说"我不知道自己是什么身份"这类穿帮话。
+    轮到你投票时，先给一句简短的怀疑理由，然后必须输出一行赋值语句。
+    当你需要指定玩家时，必须 @他，且只能使用存活玩家名单里真实存在的名字。
+    你没有调用任何工具的能力，严禁使用工具，直接根据你看到的聊天记录发言。
+
+actors:
+  ai @小猫咪 = soul:littlecat, source:openrouter/openrouter/free
+  ai @Eve = soul:the1stlittlesoul, source:deepseek-official/deepseek-v4-flash
+  ai @小机 = soul:debugcoder1, source:openrouter/openrouter/free
+  ai @看图梗 = soul:vision_terrier, source:local/gemma-3-4b-it
+  ai @铲屎官 = source:main
+  human @猫猫 = soul:human, source:0
+
+code:
+  u = file:"undercover_utils.py"
+
+vars:
+  roles = {}
+  words = {}
+  words_text = {}
+  $alive = [@小猫咪, @Eve, @小机, @看图梗, @铲屎官, @猫猫]
+  @卧底 = ""
+  @白板 = ""
+  deck_word = []
+  round_no = 0
+  $vote_results = {}
+  is_pk = false
+  $pk_candidates = []
+  $pk_voters = []
+  $voters = []
+  eliminated = "无人"
+  game_over = false
+  winner = ""
+  @speaker = ""
+  @VOTE = ""
+  announce_text = ""
+  verdict_text = ""
+
+action 结束判定 @func(u.next_round_stage):
+  in:
+    alive_players = $alive
+    roles = roles
+  out:
+    game_over, winner
+
+module 发牌:
+  action 发牌 @func(u.deal_cards):
+    in:
+      players = $alive
+    out:
+      roles, words, @卧底, @白板, deck_word
+
+  # 白板的牌面不能只显示"？？？"——演员会当成渲染故障。牌面文案由 Python 现算：
+  # 平民/卧底="你拿到的词是【X】"，白板="你手里没有词（白板）…"。
+  action 牌面文案 @func(u.card_texts):
+    in:
+      words = words
+    out:
+      words_text
+
+  action 开局公告 @notice:
+    prompt: |
+      {u.board_notice(roles)}
+      规则：每轮每人说一句描述自己的牌（不能直接说出来），然后全体投票，得票最多的人出局。
+      如果投票出现平票，本轮无人出局：平票的几位当场申辩一句、其余人重投一次决出谁走；
+      若重投再次平票，僵局不再空转——由平票的几人中随机送走一人。
+      卧底全部被投出去＝平民赢；卧底活到最后＝卧底赢；白板只要没被投出去，就算白板自己赢。
+    scope: all
+
+  action 看牌 @mind(@speaker):
+    prompt: |
+      【发牌】你是{@speaker}。
+      {words_text.@speaker}
+      这张牌只有你自己看得见：不许把牌面直接念出来，也不要说自己是什么身份（你本来就不知道）。
+      看清楚了就回一句「收到」，然后等轮到你描述。
+    showprompt: |
+      "【发牌】你的手机震了一下，看看你的词。"
+    scope: self
+
+  action 本轮顺序 @func(u.shuffle_order):
+    in:
+      players = $alive
+    out:
+      $alive
+
+  flow:
+    [发牌]: 发牌
+    [牌面文案]: 牌面文案
+    [开局公告]: 开局公告
+    [看牌]: 看牌
+    [本轮顺序]: 本轮顺序
+
+    [IN] -> [发牌]
+    [发牌] -> [牌面文案]
+    [牌面文案] -> [开局公告]
+    [开局公告] -> for @speaker in $alive:
+      -> [看牌] ->
+    -> [本轮顺序]
+    [本轮顺序] -> [OUT]
+
+#  sketch:
+#    [FOR] = 145, 201
+#    [OUT] = 600, 380
+#    [发牌] = 180, 120
+#    [开局公告] = 420, 120
+#    [看牌] = -4, 165
+#    [轮次推进] = 188, 261
+#    [本轮顺序] = 420, 260
+
+module 发言:
+  # 轮次号必须在这里自增：发牌模块只跑一次，主循环回到 &发言 时不会再进发牌，
+  # 旧写法（自增放在发牌）导致公告永远显示"第 1 轮"（2026-09-12 实测）。
+  action 轮次推进 @assign:
+    out:
+      round_no += 1
+
+  action 生成轮次公告 @func(u.round_announcement):
+    in:
+      round_no = round_no
+      alive_players = $alive
+    out:
+      announce_text
+
+  action 回合公告 @notice:
+    prompt: |
+      "{announce_text}"
+    scope: all
+
+  action 陈述 @mind(@speaker):
+    prompt: |
+      【谁是卧底 · 第{round_no}轮陈述】你是{@speaker}。{words_text.@speaker}
+      当前存活玩家：{u.names($alive)}。
+      轮到你陈述了：用一句自然的话描述你的牌面。
+      · 不能直接把牌面念出来；
+      · 也不能描述得太直白独特——太独特会被人照抄；
+      · 说一句正常游戏里会说的话就够了，不要长篇分析，不要自报身份（你自己也不知道身份，别露怯）；
+      · 本节点只输出这一句台词，不要写 SET VARIABLE，也不要写任何赋值语句。
+    scope: all
+
+  action 设定常规投票人 @assign:
+    out:
+      $voters = $alive
+
+  flow:
+    [轮次推进]: 轮次推进
+    [生成轮次公告]: 生成轮次公告
+    [回合公告]: 回合公告
+    [陈述]: 陈述
+    [设定常规投票人]: 设定常规投票人
+
+    [IN] -> [轮次推进]
+    [轮次推进] -> [生成轮次公告]
+    [生成轮次公告] -> [回合公告]
+    [回合公告] -> for @speaker in $alive:
+      -> [陈述] ->
+    -> [设定常规投票人]
+    [设定常规投票人] -> [OUT]
+
+#  sketch:
+#    [FOR] = 200, 200
+#    [OUT] = 600, 380
+#    [生成轮次公告] = 180, 120
+#    [回合公告] = 420, 120
+#    [陈述] = 393, 212
+#    [设定常规投票人] = 180, 260
+
+module 投票:
+  action 票箱清空 @assign:
+    out:
+      $vote_results = {}
+
+  action 投票 @mind(@speaker):
+    prompt: |
+      【谁是卧底 · 第{round_no}轮投票】你是{@speaker}，现在轮到你投票。
+      当前存活玩家：{u.names($alive)}。你不能投自己。
+      回想这一轮大家的陈述：谁的话跟别人对不上？谁像在含糊其辞、没有正面描述？
+      先给一句简短的怀疑理由，然后必须输出一行赋值：
+      SET VARIABLE: <<@VOTE = @你怀疑的人>>
+      只能填存活玩家名单里真实存在的名字，不能弃票。
+    showprompt: |
+      "【投票】轮到你投票：先给一句怀疑理由，再在下面的选择器里选你要投的人。"
+    scope: self
+    out:
+      @VOTE
+
+  action 收票 @func(u.collect_vote):
+    in:
+      vote_results = $vote_results
+      voter_name = @speaker
+      target = @VOTE
+    out:
+      $vote_results
+
+  flow:
+    [票箱清空]: 票箱清空
+    [投票]: 投票
+    [收票]: 收票
+
+    [IN] -> [票箱清空]
+    [票箱清空] -> par @speaker in $voters:
+      -> [投票] -> [收票] ->
+    -> [OUT]
+
+#  sketch:
+#    [PAR] = 140, -5
+#    [PAR_出] = 145, 279
+#    [OUT] = 3, 200
+#    [票箱清空] = -5, 91
+#    [投票] = 141, 91
+#    [收票] = 143, 177
+
+module 结算:
+  action 计票结算 @func(u.process_votes):
+    in:
+      vote_results = $vote_results
+      alive_players = $alive
+      roles = roles
+      round_no = round_no
+    out:
+      eliminated, $alive, is_pk, $pk_candidates, announce_text, game_over, winner
+
+  action 投票结果公告 @notice:
+    prompt: |
+      "{announce_text}"
+    scope: all
+
+  flow:
+    [计票结算]: 计票结算
+    [投票结果公告]: 投票结果公告
+
+    [IN] -> [计票结算]
+    [计票结算] -> [投票结果公告]
+    [投票结果公告] -> [OUT]
+
+#  sketch:
+#    [OUT] = 600, 280
+#    [计票结算] = 180, 120
+#    [投票结果公告] = 420, 120
+
+module 平票PK:
+  action 生成PK提示 @func(u.pk_prompt):
+    in:
+      pk_candidates = $pk_candidates
+      alive_players = $alive
+      round_no = round_no
+    out:
+      announce_text, $pk_voters
+
+  action PK公告 @notice:
+    prompt: |
+      "{announce_text}"
+    scope: all
+
+  action PK申辩 @mind(@speaker):
+    prompt: |
+      【平票 PK】你是{@speaker}，你被投到平票了，现在轮到你申辩。
+      平票的玩家：{u.names($pk_candidates)}。
+      当前存活玩家：{u.names($alive)}。
+      用一句话为自己申辩：说说为什么自己不像最可疑的那个，或者指出别人的破绽。
+      · 不要把你的词直接说出来，也不要自报身份；
+      · 一句话就够，不要长篇大论；
+      · 本节点只输出这一句申辩，不要写 SET VARIABLE，也不要写任何赋值语句。
+    scope: all
+
+  action 设定PK投票人 @assign:
+    out:
+      $voters = $pk_voters
+
+  action PK计票结算 @func(u.pk_decide):
+    in:
+      vote_results = $vote_results
+      pk_candidates = $pk_candidates
+      alive_players = $alive
+      roles = roles
+      round_no = round_no
+    out:
+      eliminated, $alive, $pk_candidates, announce_text, game_over, winner
+
+  action PK结果公告 @notice:
+    prompt: |
+      "{announce_text}"
+    scope: all
+
+  flow:
+    [生成PK提示]: 生成PK提示
+    [PK公告]: PK公告
+    [PK申辩]: PK申辩
+    [设定PK投票人]: 设定PK投票人
+    [PK重投]: &投票
+    [PK计票结算]: PK计票结算
+    [PK结果公告]: PK结果公告
+
+    [IN] -> [生成PK提示]
+    [生成PK提示] -> [PK公告]
+    [PK公告] -> for @speaker in $pk_candidates:
+      -> [PK申辩] ->
+    -> [设定PK投票人]
+    [设定PK投票人] -> [PK重投]
+    [PK重投] -> [PK计票结算]
+    [PK计票结算] -> [PK结果公告]
+    [PK结果公告] -> [OUT]
+
+#  sketch:
+#    [FOR] = 321, 101
+#    [OUT] = 131, 207
+#    [生成PK提示] = 155, -9
+#    [PK公告] = 317, -8
+#    [PK申辩] = 155, 80
+#    [设定PK投票人] = 464, -7
+#    [PK重投] = 459, 78
+#    [PK计票结算] = 464, 195
+#    [PK结果公告] = 297, 196
+
+module 赛后讨论:
+  action 终局判决 @func(u.verdict):
+    in:
+      eliminated = eliminated
+      roles = roles
+      words = words
+      alive_players = $alive
+      winner = winner
+      deck_word = deck_word
+    out:
+      verdict_text, announce_text
+
+  action 终局公告 @notice:
+    prompt: |
+      "{announce_text}"
+    scope: all
+
+  action 散场闲聊 @ai(@Eve):
+    prompt: |
+      游戏结束了，大家随便聊聊这局吧：你觉得谁演得最好，谁露了马脚。
+      本节点只输出这段闲聊，不要写 SET VARIABLE，也不要写任何赋值语句。
+    scope: all
+
+  flow:
+    [终局判决]: 终局判决
+    [终局公告]: 终局公告
+    [散场闲聊]: 散场闲聊
+
+    [IN] -> [终局判决]
+    [终局判决] -> [终局公告]
+    [终局公告] -> [散场闲聊]
+    [散场闲聊] -> [OUT]
+
+#  sketch:
+#    [OUT] = 600, 280
+#    [终局判决] = 180, 120
+#    [终局公告] = 337, 120
+#    [散场闲聊] = 495, 120
+
+mainflow:
+  [发牌]: &发牌
+  [发言]: &发言
+  [投票]: &投票
+  [结算]: &结算
+  [平票PK]: &平票PK
+  [赛后讨论]: &赛后讨论
+  [结束判定]: 结束判定
+
+  [START] -> [发牌]
+  [发牌] -> [发言]
+  [发言] -> [投票]
+  [投票] -> [结算]
+  [结算] -> fork:
+    -> if (is_pk == false) -> [结束判定]
+    -> if (is_pk == true) -> [平票PK]
+  [结束判定] -> fork:
+    -> if (game_over == false) -> [发言]
+    -> if (game_over == true) -> [赛后讨论]
+  [赛后讨论] -> [END]
+  [平票PK] -> [结束判定]
+
+#sketch:
+#  [END] = -1, 174
+#  [发牌] = 153, -15
+#  [发言] = 313, -15
+#  [投票] = 490, -15
+#  [结算] = 491, 117
+#  [平票PK] = 491, 246
+#  [赛后讨论] = 149, 159
+#  [结束判定] = 317, 166

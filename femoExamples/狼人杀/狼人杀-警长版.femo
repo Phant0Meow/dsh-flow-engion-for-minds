@@ -1,0 +1,544 @@
+meta:
+  name = 狼人杀警长版
+  version = 2.0
+  owner = 001
+  session = new
+  output_style = |
+    这是一局狼人杀游戏！你的身份牌决定了你所在的阵营，你要动脑子，努力让自己的阵营获胜。你要努力赢！
+    这是6人局：2狼，2神（预言家、女巫），2村民。其中村民和神是好人阵营，狼人是狼人阵营。
+    第一天白天有警长竞选：上警的玩家竞选警长，警下玩家投票选出警长。警长白天放逐投票计1.5票，并决定每天从他的哪一边开始发言。
+    发言要有逻辑分析，不能瞎猜。第一天夜晚没有信息，不要幻觉。推理要依赖真实的聊天记录。
+    当你们想要指定玩家成为行动时，必须@他，且只能使用场上存活玩家名单中真实存在的玩家名。
+    名单里没有的名字绝不能用——例如名单里有 @Eve，输出变量时就写 @Eve；名单里没有 Kate，就绝不能写 @Kate。
+    发言精炼有逻辑，不要长篇大论；夜晚行动回合的回复要简短。
+    你没有调用任何工具的能力，严禁使用工具，直接根据你看到的聊天记录发言。
+
+actors:
+  ai @Eve = soul:the1stlittlesoul
+  ai @小猫咪 = soul:littlecat
+  human @人 = soul:human, source:0
+  ai @小机 = soul:debugcoder1
+  ai @小灵 = soul:debugcoder2
+  ai @Portia = soul:Portia
+  ai @AI助手 = source:main
+
+code:
+  werewolf_utils = file:"werewolf_utils2.py"
+
+vars:
+  roles = {}
+  $alive = [@Eve, @小猫咪, @AI助手, @Portia, @人, @小机]
+  all = [@Eve, @小猫咪, @AI助手, @Portia, @人, @小机, @小灵]
+  $wolves = []
+  $wolf_room = []
+  $witch_has_antidote = true
+  $witch_has_poison = true
+  $dead_tonight = []
+  $game_over = false
+  $winner = ""
+  $sheriff_candidates = []
+  $vote_results = {}
+  @speaker = ""
+  @voter = ""
+  @player = ""
+  @狼人 = ""
+  day = 0
+  @上帝 = @小灵
+  @预言家 = ""
+  @女巫 = ""
+  @村民1 = ""
+  @村民2 = ""
+  $@sherif = ""
+  speak_from = ""
+  order = []
+  speaker_order = []
+  voter_order = []
+
+action roleCard @func(werewolf_utils.assign_roles):
+  out:
+    roles, wolves, wolf_room, @预言家, @女巫, @村民1, @村民2
+
+module NightPhase:
+  vars:
+    @KILL = ""
+    SAVE = false
+    @POISON = ""
+    @CHECK = ""
+    seer_check_result = ""
+    witch_prompt_text = ""
+    wolf_fail_count = 0
+
+  action nextDay @assign:
+    out:
+      day += 1
+
+  action wolf_fail @assign:
+    out:
+      wolf_fail_count += 1
+
+  action wolf_discuss @mind(@狼人):
+    prompt: |
+      这是第{day}天晚上，夜晚降临。目前场上存活玩家：{alive}。
+      wolves成员： {wolves}。你是{@狼人}, 你的身份卡是狼人。请选择你的击杀对象。
+      当你决定击杀对象时，需要输出：SET VARIABLE:<<@KILL = @目标名字>>
+    scope: wolf_room
+    out:
+      @KILL(string, "击杀目标")
+
+  action seer_check @mind(@预言家):
+    prompt: |
+      你是{@预言家}，你的身份是预言家，请选择你今晚要查验的玩家。目前场上的存活玩家：{alive}
+      你需要通过变量赋值语句：SET VARIABLE:<<@CHECK = @目标名字>> 告诉上帝你的查验对象。
+    scope: [@上帝, @预言家]
+    out:
+      @CHECK(string, "查验目标")
+
+  action seer_result @func(werewolf_utils.check_role):
+    in:
+      target_name = @CHECK
+      roles_dict = roles
+    out:
+      seer_check_result
+
+  action tell_seer @mind(@预言家):
+    prompt: |
+      现在是夜晚，你查验了 {@CHECK}，结果是：{seer_check_result}。
+    scope: [@上帝, @预言家]
+
+  action witch_prompt @func(werewolf_utils.build_witch_prompt):
+    in:
+      has_antidote = witch_has_antidote
+      has_poison = witch_has_poison
+      kill_target = @KILL
+      alive_players = alive
+      witch_name = @女巫
+    out:
+      witch_prompt_text
+
+  action witchTurn @mind(@女巫):
+    prompt: |
+      {witch_prompt_text}
+    scope: [@上帝, @女巫]
+    out:
+      SAVE(bool, "是否救人"), @POISON(string, "毒杀目标")
+
+  action resolve_night @func(werewolf_utils.resolve_night):
+    in:
+      kill_target = @KILL
+      save = SAVE
+      poison_target = @POISON
+      alive_players = alive
+      has_antidote = witch_has_antidote
+      has_poison = witch_has_poison
+      wolves = wolves
+    out:
+      dead_tonight, alive, wolves, wolf_room, witch_has_antidote, witch_has_poison
+
+  flow:
+    [seer_check]: seer_check
+    [seer_result]: seer_result
+    [tell_seer]: tell_seer
+    [witchTurn]: witchTurn
+    [witch_prompt]: witch_prompt
+    [resolve_night]: resolve_night
+    [nextDay]: nextDay
+    [wolf_discuss]: wolf_discuss
+    [pos_4]: 
+    [pos_3]: 
+    [FAIL]: wolf_fail
+    [pos_1]: 
+    [pos_2]: 
+    [pos_h]: 
+
+    [IN] -> [nextDay]
+    [nextDay] -> [pos_4]
+    [pos_4] -> for @狼人 in wolves:
+      -> if (@狼人 in alive == true) -> [wolf_discuss] ->
+    -> [pos_3]
+    [pos_3] -> fork:
+      -> if (@KILL == "") -> [FAIL]
+      -> if (@KILL != "") -> [pos_1]
+    [FAIL] -> fork:
+      -> if (wolf_fail_count < 3) -> [pos_4]
+      -> if (wolf_fail_count >= 3) -> [pos_1]
+    [pos_1] -> fork:
+      -> if (@预言家 in alive == false) -> [pos_2]
+      -> if (@预言家 in alive == true) -> [seer_check]
+    [pos_2] -> fork:
+      -> if (@女巫 in alive != true) -> [pos_h]
+      -> if (@女巫 in alive == true) -> [witch_prompt]
+    [pos_h] -> [resolve_night]
+    [resolve_night] -> [OUT]
+    [witch_prompt] -> [witchTurn]
+    [witchTurn] -> [pos_h]
+    [seer_check] -> [seer_result]
+    [seer_result] -> [tell_seer]
+    [tell_seer] -> [pos_2]
+
+#  sketch:
+#    [FOR] = 200, 200
+#    [OUT] = 600, 380
+#    [seer_check] = 448, 88
+#    [seer_result] = 583, 29
+#    [tell_seer] = 629, 110
+#    [witchTurn] = 1153, 419
+#    [witch_prompt] = 1152, 317
+#    [resolve_night] = 458, 746
+#    [nextDay] = 139, -7
+#    [wolf_discuss] = 172, 420
+#    [pos_4] = -6, 300
+#    [pos_3] = 114, 357
+#    [FAIL] = 183, 265
+#    [pos_1] = 590, 186
+#    [pos_2] = 992, 326
+#    [pos_h] = 1008, 428
+
+module DayPhase:
+  meta:
+    delay = 10
+
+  vars:
+    announcement = ""
+    @VOTE = ""
+    eliminated_today = ""
+
+  action announce @func(werewolf_utils.announce_death):
+    in:
+      dead_tonight = dead_tonight
+    out:
+      announcement
+
+  action god_announce @ai(@上帝):
+    prompt: |
+      天亮了。{announcement}。这是第{day}天白天，存活玩家：{alive}。
+      你是上帝，你需要将昨晚的结算结果告诉所有玩家。不可以在发言中暴露夜间具体行动，不可以暴露玩家身份。
+    scope: all
+
+  action speak @mind(@speaker):
+    prompt: |
+      轮到你发言。你是{@speaker}，你的身份是{@speaker.roles}。目前场上存活玩家：{alive}。昨晚 {announcement}。请分享你的想法和怀疑对象。
+    scope: all
+
+  action init @assign:
+    out:
+      $vote_results = {}
+      @VOTE = ""
+
+  action vote @mind(@voter):
+    prompt: |
+      现在是白天，投票时间。你是{@voter}，你的身份是{@voter.roles}。请先分析一下，然后决定投谁。
+      最后输出：SET VARIABLE: <<@VOTE = @目标名字>>
+    scope: [@上帝, @voter]
+    out:
+      @VOTE(string, "投票目标")
+
+  action collect_vote @func(werewolf_utils.collect_vote):
+    in:
+      votes = $vote_results
+      voter_name = @voter
+      target = @VOTE
+    out:
+      $vote_results
+
+  action process_vote @func(werewolf_utils.process_votes_and_end):
+    in:
+      votes = $vote_results
+      alive_players = alive
+      wolves = wolves
+      roles_dict = roles
+      sheriff = @sherif
+    out:
+      eliminated_today, alive, wolves, wolf_room, game_over, winner
+
+  action announce_vote @ai(@上帝):
+    prompt: |
+      投票结束。系统计票记录：{vote_results}。{eliminated_today} 被放逐（「无人」代表平票或全员弃票，今日无人出局；警长票按1.5票计）。存活玩家：{alive}。
+      你是上帝，请告诉大家投票结果，谁都投了谁。本环节只宣布投票结果，不许说下一步的行动。不可以在发言中透露玩家身份。
+    scope: all
+
+  action 移交警徽 @mind(@sherif):
+    prompt: |
+      你是警长{@sherif}，但你已不在存活玩家名单中。请指定警徽去向：
+      若移交给一位存活玩家，请输出：SET VARIABLE: <<@sherif = @你要移交的人>>（只能写存活玩家名单中的名字：{alive}）
+      若撕毁警徽，请输出：SET VARIABLE: <<@sherif = "">>
+    showprompt: |
+      请警长选择移交警徽
+    scope: [@上帝, @sherif]
+    out:
+      @sherif(string, "警徽去向")
+
+  action 决定发言顺序 @ai(@sherif):
+    prompt: |
+      你是警长{@sherif}。请决定今天白天的发言从你的哪一边开始。只输出一行赋值，二选一：
+      从左边开始：SET VARIABLE: <<speak_from = 左>>
+      从右边开始：SET VARIABLE: <<speak_from = 右>>
+    scope: [@上帝, @sherif]
+    out:
+      speak_from(string, "发言方向")
+
+  action get_order @func(werewolf_utils.get_order):
+    in:
+      from_ = speak_from
+      sheriff = @sherif
+      alive = alive
+    out:
+      order
+
+  flow:
+    [announce]: announce
+    [speak]: speak
+    [vote]: vote
+    [announce_vote]: announce_vote
+    [god]: god_announce
+    [init]: init
+    [process_vote]: process_vote
+    [c]: collect_vote
+    [移交警徽]: 移交警徽
+    [移交警徽_2]: 移交警徽
+    [决定发言顺序]: 决定发言顺序
+    [get_order]: get_order
+
+    [IN] -> [announce]
+    [announce] -> [god]
+    [god] -> fork:
+      -> if ((@sherif != "") and (@sherif in alive == true)) -> [决定发言顺序]
+      -> if ((@sherif != "") and (@sherif in alive == false)) -> [移交警徽]
+      -> if (@sherif == "") -> [get_order]
+    [决定发言顺序] -> [get_order]
+    [get_order] -> for @speaker in order:
+      -> [speak] ->
+    -> [init]
+    [init] -> par @voter in alive:
+      -> [vote] -> [c] ->
+    -> [process_vote]
+    [process_vote] -> [announce_vote]
+    [announce_vote] -> fork:
+      -> if ((@sherif != "") and (@sherif in alive == false)) -> [移交警徽_2]
+      -> if ((@sherif == "") or (@sherif in alive == true)) -> [OUT]
+    [移交警徽_2] -> [OUT]
+    [移交警徽] -> [get_order]
+
+#  sketch:
+#    [FOR] = 138, 167
+#    [PAR] = 263, 86
+#    [PAR_出] = 272, 336
+#    [OUT] = 457, 14
+#    [announce] = -159, -10
+#    [speak] = 113, 64
+#    [vote] = 260, 152
+#    [announce_vote] = 449, 225
+#    [god] = -160, 89
+#    [init] = 254, -17
+#    [process_vote] = 449, 331
+#    [c] = 259, 238
+#    [移交警徽] = -322, 171
+#    [移交警徽_2] = 452, 107
+#    [决定发言顺序] = -159, 230
+#    [get_order] = -10, 160
+
+module Election:
+  meta:
+    delay = 10
+
+  vars:
+    @start = ""
+    want_badge = false
+    @vote_target = ""
+
+  action init @assign:
+    out:
+      $sheriff_candidates = []
+      $vote_results = {}
+
+  action 是否上警 @mind(@player):
+    prompt: |
+      警长竞选开始，你是{@player}，你的身份是{@player.roles}。是否上警竞选警长？
+      若要上警，请输出：SET VARIABLE: <<want_badge = true>>
+      若不上警，请直接简短说明你放弃上警，不要输出任何赋值。
+    scope: [@上帝, @player]
+    out:
+      want_badge(bool, "是否上警")
+
+  action collect_candidacy @func(werewolf_utils.collect_candidacy):
+    in:
+      candidates = $sheriff_candidates
+      player_name = @player
+      want = want_badge
+    out:
+      $sheriff_candidates
+
+  action 上帝指定起始 @ai(@上帝):
+    prompt: |
+      上警玩家有：{$sheriff_candidates}。
+      如果有上警玩家，请随机选择其中一人作为第一个发言者，
+      输出：SET VARIABLE: <<@start = @玩家名>>。
+      如果没有人上警，则不要输出赋值。
+      随便选，越没道理越好。
+    scope: all
+    out:
+      @start(string, "起始发言玩家")
+
+  action 生成发言顺序 @func(werewolf_utils.get_speaker_order_from_start):
+    in:
+      candidates = $sheriff_candidates
+      start = @start
+    out:
+      speaker_order
+
+  action 警上发言 @mind(@player):
+    prompt: |
+      你是{@player}，请发表你的警长竞选发言，说明你的优势，并给出你对场上的初步判断。
+    scope: all
+
+  action 生成投票者列表 @func(werewolf_utils.get_sheriff_voter_order):
+    in:
+      alive = alive
+      candidates = $sheriff_candidates
+    out:
+      voter_order
+
+  action 投票 @mind(@voter):
+    prompt: |
+      你是{@voter}，现在是警长竞选投票。
+      你是警下玩家，只能从警上玩家中选择一人投票。
+      警上玩家：{$sheriff_candidates}。
+      最后必须输出：
+      SET VARIABLE: <<@vote_target = @你支持的警上玩家>>
+      只能填写警上玩家名单中的真实名字。
+    scope: [@上帝, @voter]
+    out:
+      @vote_target(string, "投票目标")
+
+  action 收集投票 @func(werewolf_utils.collect_vote):
+    in:
+      votes = $vote_results
+      voter_name = @voter
+      target = @vote_target
+    out:
+      $vote_results
+
+  action 处理选举 @func(werewolf_utils.process_election_votes):
+    in:
+      votes = $vote_results
+      candidates = $sheriff_candidates
+      alive = alive
+    out:
+      @sherif(string, "当选警长")
+
+  action 宣布警长 @ai(@上帝):
+    prompt: |
+      计票结果：{$vote_results}。
+      警长竞选结束。当前警长：{@sherif}。
+      如果 {@sherif} 为空，则宣布无人当选警长（平票或无人上警）。
+      请向全体玩家宣布警长归属，并说明警长的特权：白天放逐投票计1.5票，每天决定从警长的哪一边开始发言。
+    scope: all
+
+  flow:
+    [init]: init
+    [是否上警]: 是否上警
+    [collect_candidacy]: collect_candidacy
+    [上帝指定起始]: 上帝指定起始
+    [生成发言顺序]: 生成发言顺序
+    [警上发言]: 警上发言
+    [生成投票者列表]: 生成投票者列表
+    [投票]: 投票
+    [收集投票]: 收集投票
+    [处理选举]: 处理选举
+    [宣布警长]: 宣布警长
+
+    [IN] -> [init]
+    [init] -> par @player in alive:
+      -> [是否上警] -> [collect_candidacy] ->
+    -> [上帝指定起始]
+    [上帝指定起始] -> [生成发言顺序]
+    [生成发言顺序] -> for @player in speaker_order:
+      -> [警上发言] ->
+    -> [生成投票者列表]
+    [生成投票者列表] -> par @voter in voter_order:
+      -> [投票] -> [收集投票] ->
+    -> [处理选举]
+    [处理选举] -> [宣布警长]
+    [宣布警长] -> [OUT]
+
+#  sketch:
+#    [PAR] = 0, 172
+#    [PAR_出] = 5, 439
+#    [FOR] = 139, 255
+#    [PAR_2] = 269, 356
+#    [PAR_2_出] = 263, 99
+#    [OUT] = 130, 91
+#    [init] = -5, 72
+#    [是否上警] = -4, 256
+#    [collect_candidacy] = -2, 346
+#    [上帝指定起始] = 133, 430
+#    [生成发言顺序] = 133, 329
+#    [警上发言] = 132, 168
+#    [生成投票者列表] = 261, 429
+#    [投票] = 257, 258
+#    [收集投票] = 258, 169
+#    [处理选举] = 257, -9
+#    [宣布警长] = 125, -6
+
+module chat:
+  action chat @mind(@player):
+    prompt: |
+      游戏结束啦，随便聊聊吧～
+    scope: all
+
+  action chat_human @human(@人):
+    scope: all
+
+  flow:
+    [chat]: chat
+    [hub]: 
+    [AI_line]: 
+    [chat_human]: chat_human
+    [human_line]: 
+
+    [IN] -> [hub]
+    [hub] -> fork:
+      -> [AI_line]
+      -> [human_line]
+    [AI_line] -> for @player in [@Eve, @小猫咪, @小机, @小灵, @Portia, @AI助手]:
+      -> [chat] ->
+    -> [OUT]
+    [human_line] -> [chat_human]
+    [chat_human] -> [human_line]
+
+#  sketch:
+#    [FOR] = -224, 187
+#    [OUT] = 3, 185
+#    [chat] = -119, 261
+#    [hub] = 1, 102
+#    [AI_line] = -166, 120
+#    [chat_human] = 149, 193
+#    [human_line] = 154, 116
+
+mainflow:
+  [roleCard]: roleCard
+  [game_loop]: &NightPhase
+  [day]: &DayPhase
+  [chat]: &chat
+  [Election]: &Election
+  [pos_1]: 
+
+  [START] -> [roleCard]
+  [roleCard] -> [game_loop]
+  [game_loop] -> [pos_1]
+  [pos_1] -> fork:
+    -> if (day == 1) -> [Election]
+    -> if (day > 1) -> [day]
+  [Election] -> [day]
+  [day] -> fork:
+    -> if (game_over == false) -> [game_loop]
+    -> if (game_over == true) -> [chat]
+  [chat] -> [END]
+
+#sketch:
+#  [END] = 260, 335
+#  [roleCard] = 153, -10
+#  [game_loop] = 146, 110
+#  [day] = 267, 224
+#  [chat] = 33, 317
+#  [Election] = 13, 223
+#  [pos_1] = -19, 128

@@ -1,0 +1,331 @@
+meta:
+  name = 狼人杀
+  version = 1.0
+  owner = 001
+  session = new
+  output_style = |
+    这是一局狼人杀游戏！你的身份牌决定了你所在的阵营，你要动脑子，努力让自己的阵营获胜。你要努力赢！
+    这是6人局：2狼，2神（预言家、女巫），2村民。其中村民和神是好人阵营，狼人是狼人阵营。
+    发言要有逻辑分析，不能瞎猜。第一天夜晚没有信息，不要幻觉。推理要依赖真实的聊天记录。
+    当你们想要指定玩家成为行动时，必须@他，且只能使用场上存活玩家名单中真实存在的玩家名。
+    名单里没有的名字绝不能用——例如名单里有 @Eve，输出变量时就写 @Eve；名单里没有 Kate，就绝不能写 @Kate。
+    发言精炼有逻辑，不要长篇大论；夜晚行动回合的回复要简短。
+    你没有调用任何工具的能力，严禁使用工具，直接根据你看到的聊天记录发言。
+
+actors:
+  ai @Eve = soul:the1stlittlesoul
+  ai @小猫咪 = soul:littlecat
+  human @人 = soul:human, source:0
+  ai @小机 = soul:debugcoder1
+  ai @小灵 = soul:debugcoder2
+  ai @Portia = soul:Portia
+  ai @AI助手 = soul:AI助手, source:main
+
+code:
+  werewolf_utils = file:"werewolf_utils.py"
+
+vars:
+  roles = {}
+  $alive = [@Eve, @小猫咪, @AI助手, @Portia, @人, @小机]
+  all = [@Eve, @小猫咪, @AI助手, @Portia, @人, @小机, @小灵]
+  $wolves = []
+  $wolf_room = []
+  $witch_has_antidote = true
+  $witch_has_poison = true
+  $dead_tonight = []
+  $game_over = false
+  $winner = ""
+  @speaker = ""
+  @voter = ""
+  @狼人 = ""
+  day = 0
+  @上帝 = @小灵
+  @预言家 = ""
+  @女巫 = ""
+  @村民1 = ""
+  @村民2 = ""
+
+action roleCard @func(werewolf_utils.assign_roles):
+  out:
+    roles, wolves, wolf_room, @预言家, @女巫, @村民1, @村民2
+
+module NightPhase:
+  vars:
+    @KILL = ""
+    SAVE = false
+    @POISON = ""
+    @CHECK = ""
+    seer_check_result = ""
+    wolf_fail_count = 0
+
+  action nextDay @assign:
+    out:
+      day += 1
+
+  action wolf_fail @assign:
+    out:
+      wolf_fail_count += 1
+
+  action wolf_discuss @mind(@狼人):
+    prompt: |
+      这是第{day}天晚上，夜晚降临。目前场上存活玩家：{alive}。
+      wolves成员： {wolves}。你是{@狼人}, 你的身份卡是狼人。请选择你的击杀对象。
+      当你决定击杀对象时，需要输出：SET VARIABLE:<<@KILL = @目标名字>>
+    scope: wolf_room
+    out:
+      @KILL(string, "击杀目标")
+
+  action seer_check @mind(@预言家):
+    prompt: |
+      你是{@预言家}，你的身份是预言家，请选择你今晚要查验的玩家。目前场上的存活玩家：{alive}
+      你需要通过变量赋值语句：SET VARIABLE:<<@CHECK = @目标名字>> 告诉上帝你的查验对象。
+    scope: [@上帝, @预言家]
+    out:
+      @CHECK(string, "查验目标")
+
+  action seer_result @func(werewolf_utils.check_role):
+    in:
+      target_name = @CHECK
+      roles_dict = roles
+    out:
+      seer_check_result
+
+  action tell_seer @mind(@预言家):
+    prompt: |
+      现在是夜晚，你查验了 {@CHECK}，结果是：{seer_check_result}。
+    scope: [@上帝, @预言家]
+
+  action witchTurn @mind(@女巫):
+    prompt: |
+      你是{@女巫}, 你的身份是女巫，今晚 {@KILL} 被杀。你当前还有解药：{witch_has_antidote}，还有毒药：{witch_has_poison}。你有一瓶解药可以救他，你要用吗？如果使用解药，请输出： SET VARIABLE:<< SAVE = true >>
+      你还有一瓶毒药，如果你认为谁是狼人，你应该用毒药毒他。你要使用毒药吗？如果你要使用毒药，请输出： SET VARIABLE:<< @POISON = @目标名字>>
+      注意：游戏规则规定，女巫一天晚上不可以用两瓶药，所以这两个SET VARIABLE，你最多只能输出其中一个，或不输出。
+      只能对存活玩家用药：{alive}。
+    scope: [@上帝, @女巫]
+    out:
+      SAVE(bool, "是否救人"), @POISON(string, "毒杀目标")
+
+  action resolve_night @func(werewolf_utils.resolve_night):
+    in:
+      kill_target = @KILL
+      save = SAVE
+      poison_target = @POISON
+      alive_players = alive
+      has_antidote = witch_has_antidote
+      has_poison = witch_has_poison
+      wolves = wolves
+    out:
+      dead_tonight, alive, wolves, wolf_room, witch_has_antidote, witch_has_poison
+
+  flow:
+    [seer_check]: seer_check
+    [seer_result]: seer_result
+    [tell_seer]: tell_seer
+    [witchTurn]: witchTurn
+    [resolve_night]: resolve_night
+    [nextDay]: nextDay
+    [wolf_discuss]: wolf_discuss
+    [pos_4]: 
+    [pos_3]: 
+    [FAIL]: wolf_fail
+    [pos_1]: 
+    [pos_2]: 
+    [pos_h]: 
+
+    [IN] -> [nextDay]
+    [nextDay] -> [pos_4]
+    [pos_4] -> for @狼人 in wolves:
+      -> if (@狼人 in alive == true) -> [wolf_discuss] ->
+    -> [pos_3]
+    [pos_3] -> fork:
+      -> if (@KILL == "") -> [FAIL]
+      -> if (@KILL != "") -> [pos_1]
+    [FAIL] -> fork:
+      -> if (wolf_fail_count < 3) -> [pos_4]
+      -> if (wolf_fail_count >= 3) -> [pos_1]
+    [pos_1] -> fork:
+      -> if (@预言家 in alive == false) -> [pos_2]
+      -> if (@预言家 in alive == true) -> [seer_check]
+    [pos_2] -> fork:
+      -> if (@女巫 in alive != true) -> [pos_h]
+      -> if (@女巫 in alive == true) -> [witchTurn]
+    [pos_h] -> [resolve_night]
+    [resolve_night] -> [OUT]
+    [witchTurn] -> [pos_h]
+    [seer_check] -> [seer_result]
+    [seer_result] -> [tell_seer]
+    [tell_seer] -> [pos_2]
+
+#  sketch:
+#    [FOR] = 29, 404
+#    [OUT] = 389, 687
+#    [seer_check] = 448, 88
+#    [seer_result] = 583, 29
+#    [tell_seer] = 629, 110
+#    [witchTurn] = 1125, 315
+#    [resolve_night] = 458, 746
+#    [nextDay] = 139, -7
+#    [wolf_discuss] = 182, 420
+#    [pos_4] = -6, 300
+#    [pos_3] = 114, 357
+#    [FAIL] = 183, 265
+#    [pos_1] = 590, 186
+#    [pos_2] = 992, 326
+#    [pos_h] = 1017, 441
+
+module DayPhase:
+  meta:
+    delay = 10
+
+  vars:
+    announcement = ""
+    @VOTE = ""
+    $vote_results = {}
+    eliminated_today = ""
+
+  action announce @func(werewolf_utils.announce_death):
+    in:
+      dead_tonight = dead_tonight
+    out:
+      announcement
+
+  action god_announce @ai(@上帝):
+    prompt: |
+      天亮了。{announcement}。这是第{day}天白天，存活玩家：{alive}。
+      你是上帝，你需要将昨晚的结算结果告诉所有玩家。不可以在发言中暴露夜间具体行动，不可以暴露玩家身份。
+    scope: all
+
+  action speak @mind(@speaker):
+    prompt: |
+      轮到你发言。你是{@speaker}，你的身份是{@speaker.roles}。目前场上存活玩家：{alive}。昨晚 {announcement}。请分享你的想法和怀疑对象。
+    scope: all
+
+  action init @assign:
+    out:
+      $vote_results = {}
+      @VOTE = ""
+
+  action vote @mind(@voter):
+    prompt: |
+      现在是白天，投票时间。你是{@voter}，你的身份是{@voter.roles}。请先分析一下，然后决定投谁。
+      最后输出：SET VARIABLE: <<@VOTE = @目标名字>>
+    scope: [@上帝, @voter]
+    out:
+      @VOTE(string, "投票目标")
+
+  action collect_vote @func(werewolf_utils.collect_vote):
+    in:
+      votes = $vote_results
+      voter_name = @voter
+      target = @VOTE
+    out:
+      $vote_results
+
+  action process_vote @func(werewolf_utils.process_votes_and_end):
+    in:
+      votes = $vote_results
+      alive_players = alive
+      wolves = wolves
+      roles_dict = roles
+    out:
+      eliminated_today, alive, wolves, wolf_room, game_over, winner
+
+  action announce_vote @ai(@上帝):
+    prompt: |
+      投票结束。系统计票记录：{vote_results}。{eliminated_today} 被放逐（「无人」代表平票或全员弃票，今日无人出局）。存活玩家：{alive}。
+      你是上帝，请告诉大家投票结果，谁都投了谁。本环节只宣布投票结果，不许说下一步的行动。不可以在发言中透露玩家身份。
+    scope: all
+
+  flow:
+    [announce]: announce
+    [speak]: speak
+    [vote]: vote
+    [announce_vote]: announce_vote
+    [god]: god_announce
+    [init]: init
+    [process_vote]: process_vote
+    [c]: collect_vote
+
+    [IN] -> [announce]
+    [announce] -> [god]
+    [god] -> for @speaker in alive:
+      -> [speak] ->
+    -> [init]
+    [init] -> par @voter in alive:
+      -> [vote] -> [c] ->
+    -> [process_vote]
+    [process_vote] -> [announce_vote]
+    [announce_vote] -> [OUT]
+
+#  sketch:
+#    [FOR] = 89, 93
+#    [PAR] = 273, 71
+#    [PAR_出] = 59, 224
+#    [OUT] = 295, 248
+#    [announce] = -72, 61
+#    [speak] = 120, -16
+#    [vote] = 292, 129
+#    [announce_vote] = 135, 279
+#    [god] = -57, 172
+#    [init] = 268, -29
+#    [process_vote] = -36, 295
+#    [c] = 151, 152
+
+module chat:
+  vars:
+    @player = ""
+
+  action chat @mind(@player):
+    prompt: |
+      游戏结束啦，随便聊聊吧～
+    scope: all
+
+  action chat_human @human(@人):
+    scope: all
+
+  flow:
+    [chat]: chat
+    [hub]: 
+    [AI_line]: 
+    [pos_1]: 
+    [chat_human]: chat_human
+
+    [IN] -> [hub]
+    [hub] -> fork:
+      -> [AI_line]
+      -> [pos_1]
+    [AI_line] -> for @player in [@Eve, @小猫咪, @小机, @小灵, @Portia, @AI助手]:
+      -> [chat] ->
+    -> [OUT]
+    [pos_1] -> [chat_human]
+    [chat_human] -> [pos_1]
+
+#  sketch:
+#    [FOR] = -207, 236
+#    [OUT] = 7, 289
+#    [chat] = -129, 175
+#    [hub] = -1, 91
+#    [AI_line] = -210, 129
+#    [pos_1] = 187, 124
+#    [chat_human] = 180, 209
+
+mainflow:
+  [roleCard]: roleCard
+  [game_loop]: &NightPhase
+  [day]: &DayPhase
+  [chat]: &chat
+
+  [START] -> [roleCard]
+  [roleCard] -> [game_loop]
+  [game_loop] -> [day]
+  [day] -> fork:
+    -> if (game_over == false) -> [game_loop]
+    -> if (game_over == true) -> [chat]
+  [chat] -> [END]
+
+#sketch:
+#  [END] = -72, 328
+#  [roleCard] = -168, -12
+#  [game_loop] = -175, 92
+#  [day] = -107, 207
+#  [chat] = -287, 257
