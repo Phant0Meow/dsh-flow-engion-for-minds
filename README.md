@@ -1,6 +1,5 @@
 # 0.1.5 dsh可零改动直接接入，低版本dsh需改（见dshPatch）。
-# 现在不成熟，还有很多bug。欢迎开发者一起来品鉴这个项目。它真的非常好玩。
-# dsh-femo — FEMO 多智能体剧本引擎（dsh 自包含插件版）
+# dsh-femo — FEMO 多智能体剧本引擎（dsh 插件版）
 
 > **Femo** 是 **Flow Emergence** 的缩写。
 > 把"像写剧本一样编排多智能体"的 Femo 引擎做成一个 **DeepSeek Harness (dsh) 插件**。
