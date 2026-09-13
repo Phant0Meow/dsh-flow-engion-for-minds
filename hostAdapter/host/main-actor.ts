@@ -313,7 +313,7 @@ function tryDeliverNext(ctx: Context, resolved: ResolvedConfig, sid: string, tri
     }
     if (deliveries.openTurn(sid) !== undefined) return // 用户又开了一轮 → 等它的 turn/end
     // 交付前活性复核（2026-09-11）：runMainModelTurn 是异步起跑的（microtask 才
-    // 走到登记/排队），引擎可能在同一 tick 里就 flow_stopped/flow_error 了——
+    // 走到登记/排队），引擎可能在同一 tick 里就 flow_paused/flow_error 了——
     // 那次 abandon 早于本条入队，谁也作废不到它。停靠登记（broker）是节点还在
     // 等答案的唯一权威凭据：登记没了 = 剧本已停/节点已收尾，本条直接作废，
     // 绝不对着已死的引擎交卷（否则会以空 output 落到旧 wait_key 上）。
@@ -333,11 +333,11 @@ function tryDeliverNext(ctx: Context, resolved: ResolvedConfig, sid: string, tri
   })
 }
 
-/** 作废本会话排队件（剧本停止/出错/换场/卸载）：resolve 交卷槽防
+/** 作废本会话排队件（剧本暂停/出错/换场/卸载）：resolve 交卷槽防
  *  runMainModelTurnInner 悬挂在 `await answer`（其后的 broker.park 因 parker
  *  已被 abortJob 清除而立即 aborted 收场，整条收尾链不卡）。
  *  @param forgetTurn - 连轮开闭状态一起清（换场 flow_start / 卸载用；剧本
- *  停止时用户可能还在说话，不clear，等它自己的 turn/end）。 */
+ *  暂停时用户可能还在说话，不clear，等它自己的 turn/end）。 */
 function dropMainDeliveries(sid: string, reason: string, resolved?: ResolvedConfig, forgetTurn = false): number {
   const dropped = forgetTurn ? deliveries.forget(sid) : deliveries.dropAll(sid)
   for (const d of dropped) d.resolve?.()
@@ -354,7 +354,7 @@ export function disposeMainDeliveries(): void {
   deliveries.clear()
 }
 
-/** flow_stopped/flow_error：作废在飞注入（引擎已死，交卷无处可去；主模型
+/** flow_paused/flow_error：作废在飞注入（引擎已死，交卷无处可去；主模型
  * 那轮回答就当普通戏外回答留在主窗口）。被作废者不回传引擎、不写错误表。
  * 【V6.3】投影兜底：turn/start 已落（骨架+名字已在 stage/角色窗）而 turn/end
  * 不会再来——flush 半截内容+合成 turn/end 收整成块（与 subagent finally 同款；
@@ -525,7 +525,7 @@ async function runMainModelTurnInner(
     // 为 retry verdict）。retry → 经租约 steer（rearmPending+steerMainAgent 都
     // 封装在租约回调里，循环体零特殊）→ 主模型新回合 → mainSessionEventHook
     // 既有捕获（turn/start 重置逻辑天然多轮兼容）→ turn/end → settleMainAnswer
-    // 交卷 → 再次 park。done（node_settled ok/gave_up）或 aborted（停止/出错/
+    // 交卷 → 再次 park。done（node_settled ok/gave_up）或 aborted（暂停/出错/
     // bridge 死亡/15min 超时）→ 收尾。flows/水位不动（v4 §7.2）：流水已在首轮
     // 注入（水位已推进），反馈自带节点/演员身份，重注=重复刷屏。
     let verdict = await broker.park(waitKey)

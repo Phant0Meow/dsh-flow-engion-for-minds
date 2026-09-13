@@ -10,7 +10,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { SessionId } from '@deepseek-ai/dsh-session'
-import { broadcastCompat, type ProjectionRegistry } from './windowing-native'
+import { broadcastCompat } from './windowing-native'
 import type { ProjectionRegistry } from './projection'
 import { debugRunToolOutcome, type DebugRunCollect } from './debug-run'
 
@@ -24,9 +24,9 @@ export interface FemoToolDeps {
   /** 开 Job（fresh=job_start 从头 / resume=job_resume 六关裁决续跑）——
    *  实现落 index.ts（§10.2）：错误原话抛出（six-gate code+detail）。 */
   startJob(sessionId: string, mode: 'fresh' | 'resume', jobId?: number): Promise<{ ok: true; jobId: number; note?: string } | { ok: false; error: string }>
-  /** 停止本会话正在运行的 Job（不带 job_id——执行体自动解析；幂等——
-   *  引擎侧 suspended/finished/failed 照样回执 stopped:true）。 */
-  stopScript(sessionId: string): Promise<{ stopped: boolean; state?: string; jobId?: number }>
+  /** 暂停本会话正在运行的 Job（不带 job_id——执行体自动解析；幂等——
+   *  引擎侧 suspended/finished/failed 照样回执 paused:true）。 */
+  pauseScript(sessionId: string): Promise<{ paused: boolean; state?: string; jobId?: number }>
   /** Job 清单（femo-run list_jobs——bridge list_jobs 代理）。 */
   listJobs(): Promise<Array<{ job_id: number; state: string; reason: string; waiting_human: boolean; femo_session_id: number | null; host_ref: string; script_name: string; created_at: string; updated_at: string; has_breakpoint: boolean }>>
   /** 读会话当前挂载的剧本内容（最终生效文本 + 来源记录）。 */
@@ -92,7 +92,7 @@ const runTool: FemoToolSchema = {
   description:
     '控制当前 Femo 会话的剧本运行。action 必填，四选一：\n' +
     '- fresh_start：从头开演已挂载的剧本（上一场若挂起会自动存档，可续跑找回）；返回值带本次开演的 job_id\n' +
-    '- stop：停止并挂起本会话当前正在运行的剧本（断点保留，可 resume 续跑）；不需要 job_id——自动停本会话正在跑的 Job\n' +
+    '- pause：暂停并挂起本会话当前正在运行的剧本（断点保留，可 resume 续跑）；不需要 job_id——自动停本会话正在跑的 Job\n' +
     '- resume：从挂起处续跑，必须带 job_id 指名要续跑哪个 Job（一个会话可能挂起多个 Job；六关裁决，改了剧本/无断点会明确报错）\n' +
     '- list_jobs：列出全部 Job（状态/场次/归属——查找挂起 Job 的 job_id 用）\n' +
     '运行后剧本由引擎驱动，角色发言显示在投影窗，不进入你的上下文；' +
@@ -102,12 +102,12 @@ const runTool: FemoToolSchema = {
     properties: {
       action: {
         type: 'string',
-        enum: ['fresh_start', 'stop', 'resume', 'list_jobs'],
-        description: '对剧本运行的控制动作：fresh_start=从头开演 / stop=停止并挂起 / resume=从挂起处续跑 / list_jobs=列出全部 Job',
+        enum: ['fresh_start', 'pause', 'resume', 'list_jobs'],
+        description: '对剧本运行的控制动作：fresh_start=从头开演 / pause=暂停并挂起 / resume=从挂起处续跑 / list_jobs=列出全部 Job',
       },
       job_id: {
         type: 'number',
-        description: 'resume 必填：要续跑的 Job 编号（先 list_jobs 查询）。fresh_start / stop / list_jobs 不需要传本参数',
+        description: 'resume 必填：要续跑的 Job 编号（先 list_jobs 查询）。fresh_start / pause / list_jobs 不需要传本参数',
       },
     },
     required: ['action'],
@@ -318,8 +318,8 @@ export function registerFemoTools(
 
   register(runTool, async (args, agent) => {
     const action = typeof args.action === 'string' ? args.action.trim() : ''
-    if (action !== 'fresh_start' && action !== 'stop' && action !== 'resume' && action !== 'list_jobs') {
-      return { ok: false, error: 'action 是必填参数：fresh_start / stop / resume / list_jobs 四选一' }
+    if (action !== 'fresh_start' && action !== 'pause' && action !== 'resume' && action !== 'list_jobs') {
+      return { ok: false, error: 'action 是必填参数：fresh_start / pause / resume / list_jobs 四选一' }
     }
     const sid = String(agent.session.id)
     const jobIdArg = typeof args.job_id === 'number' && Number.isFinite(args.job_id)
@@ -336,15 +336,15 @@ export function registerFemoTools(
         // startJobOnSession 执行体（2026-09-06：femoGen 按钮与工具同观感），
         // 此处不再重复写。
         // 幽灵书签 note（§八.14）：上一场挂起的 Job 若有，明示找回入口。
-        // job_id 结构化回传：主模型据此可对同一 Job 发 resume/stop。
+        // job_id 结构化回传：主模型据此可对同一 Job 发 resume/pause。
         return { ok: true, action, job_id: result.jobId, note: `已从头开始运行剧本（Job ${result.jobId}）${result.note ? `；${result.note}` : ''}` }
       }
-      case 'stop': {
-        // 停止=挂起（断点保留可续跑）。不带 job_id（2026-09-06 猫猫拍板）：
-        // 执行体自动解析本会话正在运行的 Job。停止的用户通知由引擎
-        // flow_stopped 统一广播，工具侧不再重复写。
-        const result = await deps.stopScript(sid)
-        if (result.stopped !== true) {
+      case 'pause': {
+        // 暂停=挂起（断点保留可续跑）。不带 job_id（2026-09-06 猫猫拍板）：
+        // 执行体自动解析本会话正在运行的 Job。暂停的用户通知由引擎
+        // flow_paused 统一广播，工具侧不再重复写。
+        const result = await deps.pauseScript(sid)
+        if (result.paused !== true) {
           return { ok: true, action, note: '该会话没有正在运行的剧本' }
         }
         // note 里 undefined 插值会出字面量——jobId 条件展开（无损 JSON 约束）。
@@ -352,7 +352,7 @@ export function registerFemoTools(
           ok: true,
           action,
           ...(result.jobId !== undefined ? { job_id: result.jobId } : {}),
-          note: `已停止并挂起（${result.jobId !== undefined ? `Job ${result.jobId}，` : ''}断点保留，可 resume 续跑）`,
+          note: `已暂停挂起（${result.jobId !== undefined ? `Job ${result.jobId}，` : ''}断点保留，可 resume 续跑）`,
         }
       }
       case 'resume': {

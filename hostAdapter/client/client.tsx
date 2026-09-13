@@ -433,23 +433,23 @@ export function apply(ctx: any): void {
       }
       throw new Error(message)
     },
-    stopScript: async (sid: string, jobId?: number): Promise<{ stopped?: boolean; state?: string } | undefined> => {
-      // §8.4 B3：stop 归属解析——sessionId 必填（只认本会话绑定）；jobId 可选
-      // 显式指定（femoGen 停止按钮带当前 Job 号，宿主按引擎档案裁决归属）。
-      // resolve 值带回执（stopped:false=无活跃剧本，femoGen 据此复位按钮；
-      // state=引擎侧 Job 现态——stopped:true 但 state 已非 running=幂等无操作，
+    pauseScript: async (sid: string, jobId?: number): Promise<{ paused?: boolean; state?: string } | undefined> => {
+      // §8.4 B3：pause 归属解析——sessionId 必填（只认本会话绑定）；jobId 可选
+      // 显式指定（femoGen 暂停按钮带当前 Job 号，宿主按引擎档案裁决归属）。
+      // resolve 值带回执（paused:false=无活跃剧本，femoGen 据此复位按钮；
+      // state=引擎侧 Job 现态——paused:true 但 state 已非 running=幂等无操作，
       // femoGen 据此给「引擎没有活跃执行体被停」的知情提示，2026-09-07 214 事故）。
       const qs = new URLSearchParams({ sessionId: sid })
       if (jobId !== undefined) qs.set('jobId', String(jobId))
-      const response = await fetch(`/dsh-femo/stop?${qs.toString()}`, {
+      const response = await fetch(`/dsh-femo/pause?${qs.toString()}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: '{}',
       })
-      let message = `stop HTTP ${response.status}`
+      let message = `pause HTTP ${response.status}`
       try {
-        const data = await response.json() as { ok?: boolean; error?: string; stopped?: boolean; state?: string }
-        if (data.ok === true) return { stopped: data.stopped, state: data.state }
+        const data = await response.json() as { ok?: boolean; error?: string; paused?: boolean; state?: string }
+        if (data.ok === true) return { paused: data.paused, state: data.state }
         message = data.error ?? message
       } catch {
         // non-JSON body: keep the status message

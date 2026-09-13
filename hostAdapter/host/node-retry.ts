@@ -18,7 +18,7 @@
  * "信号到了没人接"的窗口）。
  *
  * 安全网（v4 §5）：park 带 15min 超时（P4：> API 五段退避 860s、< 引擎
- * wait_for_input 3600s）；flow_stopped/flow_error/bridge_run_ended/onExited
+ * wait_for_input 3600s）；flow_paused/flow_error/bridge_run_ended/onExited
  * 时 abortAll 全场放行；deliverRetry 无 parker 时仅 log——不做空回传注入
  * （盲目注入可能误喂 human wait_key 静默跳过一个人类节点，危害大于让引擎
  * 3600s 超时兜底）。
@@ -27,7 +27,7 @@
 import { safeSteer } from './safe-steer'
 
 /** 一次停靠裁决。retry=让执行者带着反馈再试一次；done=节点审结（ok/gave_up）
- *  或停靠超时兜底收场；aborted=全场停止/出错/bridge 死亡。 */
+ *  或停靠超时兜底收场；aborted=全场暂停/出错/bridge 死亡。 */
 export type ParkVerdict =
   | { kind: 'retry'; feedback: string; attempt: number; aiName: string }
   | { kind: 'done' }
@@ -43,7 +43,7 @@ export type ParkerKind = 'subagent' | 'main' | 'human'
 
 /** 登记规格（register 的入参）。steer 是执行者的"继续跑"租约：调用方闭包
  *  捕获自己的执行通道，broker 只经租约触发，绝不直接触碰执行者。
- *  jobId（Job 模型 §9.3）：清场域化维度——flow_stopped/flow_error 只 abort
+ *  jobId（Job 模型 §9.3）：清场域化维度——flow_paused/flow_error 只 abort
  *  本 Job 的停靠者，不误杀其他会话在飞演员。parker 键仍为 waitKey：
  *  run_tag 前缀后 wait_key 全局唯一（§5.6），不同 Job 不可能撞键——键控
  *  方案不变，只加过滤维度。 */
@@ -183,7 +183,7 @@ export class NodeRetryBroker {
     }
   }
 
-  /** 全场放行（flow_stopped/flow_error/bridge_run_ended/onExited）：所有
+  /** 全场放行（flow_paused/flow_error/bridge_run_ended/onExited）：所有
    *  parker resolve(aborted) 并清空登记（引擎已停，剩余停靠无意义；幂等）。 */
   abortAll(reason: string): void {
     for (const [waitKey, p] of [...this.parkers]) {
@@ -198,7 +198,7 @@ export class NodeRetryBroker {
     if (reason.length > 0) console.log(`[dsh-femo] node-retry abortAll: ${reason}`)
   }
 
-  /** Job 域放行（Job 模型 §9.3）：只 abort 本 Job 的 parker——flow_stopped/
+  /** Job 域放行（Job 模型 §9.3）：只 abort 本 Job 的 parker——flow_paused/
    *  flow_error 清场用，不误杀其他会话在飞演员（abortAll 保留给 bridge 死亡/
    *  HMR 全场场景）。 */
   abortJob(jobId: number, reason: string): void {

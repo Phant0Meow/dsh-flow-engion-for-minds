@@ -22,11 +22,11 @@ export interface ScriptViewInjected {
   saveScript(name: string, content: string, sessionId?: string): Promise<string>
   /** Play a script on the CURRENT session (must be Femo mode). */
   runScript(sessionId: string, scriptPath?: string): Promise<void>
-  /** Hard-stop the session's running Job (§8.4 B3：sessionId 归属解析必填)；
+  /** Hard-pause the session's running Job (§8.4 B3：sessionId 归属解析必填)；
    *  the checkpoint stays for resume. jobId 显式指定时宿主按引擎档案 host_ref
-   *  裁决归属（内存镜像滞后也能停——2026-09-06 停止失效事故的正解路径）。
-   *  resolve 值带宿主回执（stopped:false=该会话无活跃剧本，前端据此复位按钮）。 */
-  stopScript(sessionId: string, jobId?: number): Promise<{ stopped?: boolean } | undefined>
+   *  裁决归属（内存镜像滞后也能停——2026-09-06 暂停失效事故的正解路径）。
+   *  resolve 值带宿主回执（paused:false=该会话无活跃剧本，前端据此复位按钮）。 */
+  pauseScript(sessionId: string, jobId?: number): Promise<{ paused?: boolean } | undefined>
   fetchErrors(sessionId: string): Promise<Array<{ ts: number; text: string }>>
   /** 打开 dsh 侧边栏（手机版 femoGen 返回键回调）。 */
   toggleSidebar(): void

@@ -1011,9 +1011,9 @@ def run_once(script, seed: int, overrides: Dict[str, List[str]],
         if event_type == 'flow_done':
             flow_result['outcome'] = 'completed'
             bus.emit('flow_outcome', outcome='completed', error=None)
-        elif event_type == 'flow_stopped':
-            flow_result['outcome'] = 'stopped'
-            bus.emit('flow_outcome', outcome='stopped', error=None)
+        elif event_type == 'flow_paused':
+            flow_result['outcome'] = 'paused'
+            bus.emit('flow_outcome', outcome='paused', error=None)
         elif event_type == 'flow_error':
             flow_result['outcome'] = 'error'
             flow_result['error'] = str((data or {}).get('error', ''))
@@ -1409,7 +1409,7 @@ def cli_exit_code(runs: List[dict]) -> int:
     """CLI 退出码三档。completed 与 max_steps（跑满步数预算未停——可能是
     无限循环/持续循环型设计）都算「可接受结局」：max_steps 不再当失败
     （2026-09-12 拍板：持续循环型模块单测跑满预算即停是预期，退出码 0；
-    真死循环在报告里响亮标注，不靠退出码表达）。error/exception/stopped
+    真死循环在报告里响亮标注，不靠退出码表达）。error/exception/paused
     照旧：全好 0、部分好 2、全坏 1。"""
     good = sum(1 for r in runs if r['outcome'] in ('completed', 'max_steps'))
     return 0 if good == len(runs) else (2 if good else 1)

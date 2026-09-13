@@ -926,9 +926,9 @@ class FEMORunner:
     def stop(self):
         """全局立刻停止：取消主协程，中断 LLM 流式输出。
         v3（运行状态链路重构 §5.5）：
-        - 幂等头：二次 stop / HMR dispose 不再双 flow_stopped（灭 D6）；
+        - 幂等头：二次 stop / HMR dispose 不再双 flow_paused（灭 D6）；
         - _stopped 从零消费标志复活为真消费（A1 取消诚实化的判定依据：
-          run_async 取消路径据它区分 user_stop / cancelled）；
+          run_async 取消路径据它区分 user_pause / cancelled）；
         - 时序红线（v1 裁决）：**先 cancel 后 abort**——cancel 先置 _must_cancel，
           abort_all 唤醒的协程在恢复点直接吃 CancelledError 零推进；反过来
           （先 abort）唤醒与 cancel 之间存在同步推进窗口，协程可能拿着输入值
@@ -977,7 +977,7 @@ class FEMORunner:
 
         # ⑥ 发送事件通知前端（首发照发：v4 停靠清场——宿主作废在飞 main 回答/
         #    掐断在飞子代理——全挂它上面，不发则宿主停靠托管挂满 15min）
-        self._emit_event('flow_stopped', {})
+        self._emit_event('flow_paused', {})
             
     async def _run_join(self, join_id: str, node, flow, extra_actions=None, max_steps=0) -> Optional[str]:
         """join 网关（R3 接线，清单 D3——主流程路径）。
@@ -2479,14 +2479,14 @@ class FEMORunner:
                 # 快照，宿主后端/直连同款）→ raise FEMORunPaused → run_async 走
                 # suspended(node_pause) 可续跑。替换旧 task_pause.pause() 的
                 # `await event.wait()` 无超时挂死协程（C3：永挂无人 set）。
-                # 发 flow_stopped 不发 flow_error：宿主把 flow_error 当 failed
+                # 发 flow_paused 不发 flow_error：宿主把 flow_error 当 failed
                 # 终态处理（全场掐断+steer"运行出错"）；挂起时在飞子代理确实
-                # 该收、停靠确实该放行——flow_stopped 的宿主分支恰好就是这套
-                # 清场，一处信号两用（前端显示"已停止"文案，README §十四.4 备注）。
+                # 该收、停靠确实该放行——flow_paused 的宿主分支恰好就是这套
+                # 清场，一处信号两用（前端显示"已暂停"文案，README §十四.4 备注）。
                 cur = current_task_ctx()
                 node_name = cur.current_node_id if cur else ''
                 print(f"[runtime]⚠️ AI 调用失败（返回 None），变量已保存，分支在节点 {node_name} 挂起（可续跑）…")
-                self._emit_event('flow_stopped', {
+                self._emit_event('flow_paused', {
                     'reason': 'node_pause',
                     'node_name': node_name,
                     'error': f'AI 调用失败，分支在节点 "{node_name}" 暂停，变量已保存',
@@ -3323,7 +3323,7 @@ class FEMORunner:
                 print("[runtime] 主协程被取消，流程终止")
                 self._run_terminated = True
                 self._rc_call('on_state_change', 'suspended',
-                              'user_stop' if self._stopped else 'cancelled')
+                              'user_pause' if self._stopped else 'cancelled')
             except FEMORunPaused:
                 # C3（§5.7）：直连模式 AI 失败挂起——节点门口断点已拍，
                 # 走 suspended(node_pause) 可续跑（替换旧 task_pause 挂死）。

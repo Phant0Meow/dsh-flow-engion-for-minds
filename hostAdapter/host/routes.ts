@@ -247,9 +247,9 @@ export function registerRoutes(ctx: Context, deps: RoutesDeps): void {
     })
     webServer.register({
       kind: 'exact',
-      path: '/dsh-femo/stop',
+      path: '/dsh-femo/pause',
       handler: (req: IncomingMessage, res: ServerResponse): void => {
-        // Hard-stop the session's running Job (§8.4，B3 归属解析)：query 带
+        // Hard-pause the session's running Job (§8.4，B3 归属解析)：query 带
         // sessionId 必填——只认本会话绑定，不再"停别家的戏"。
         // 【2026-09-06】可选 jobId 参数：显式指定时归属裁决走引擎档案
         // host_ref（宿主内存镜像滞后/丢失——如 146 事故——也能正确停）。
@@ -266,26 +266,26 @@ export function registerRoutes(ctx: Context, deps: RoutesDeps): void {
             try {
               const st = await bridge.send('get_job_state', { job_id: explicitJobId }, 15000) as { host_ref?: string } | undefined
               if (st?.host_ref !== sessionId) {
-                const denied = `Job ${explicitJobId} 不属于会话 ${sessionId}（归属 ${st?.host_ref ?? '?'}），拒绝停止`
-                // 停止被拒=动作失败（非静默，2026-09-07 214 事故收尾）：错误面板
+                const denied = `Job ${explicitJobId} 不属于会话 ${sessionId}（归属 ${st?.host_ref ?? '?'}），拒绝暂停`
+                // 暂停被拒=动作失败（非静默，2026-09-07 214 事故收尾）：错误面板
                 // 留痕 + 诊断流，前端据非 2xx 在画布上可见报错。
-                recordError(sessionId, `⏹ 停止失败：${denied}`)
-                pushDiag('stop', `DENIED sid=${sessionId} job=${explicitJobId}（归属 ${st?.host_ref ?? '?'}）`)
+                recordError(sessionId, `⏸ 暂停失败：${denied}`)
+                pushDiag('pause', `DENIED sid=${sessionId} job=${explicitJobId}（归属 ${st?.host_ref ?? '?'}）`)
                 writeJson(res, 403, { ok: false, error: denied })
                 return
               }
-              // job_stop 发送超时 15s > 引擎侧强停兜底 join 10s+0.2s 退出缓冲——
+              // job_pause 发送超时 15s > 引擎侧强停兜底 join 10s+0.2s 退出缓冲——
               // 慢收场（强停路径）不等价于失败，回执总能赶上。
-              const result = await bridge.send('job_stop', { job_id: explicitJobId }, 15000) as { stopped?: boolean; state?: string; confirmed?: boolean } | undefined
-              console.log(`[dsh-femo] stop (explicit) sid=${sessionId} job=${explicitJobId} -> stopped=${result?.stopped === true} state=${String(result?.state ?? '-')} confirmed=${result?.confirmed === true}`)
-              writeJson(res, 200, { ok: true, stopped: result?.stopped === true, state: result?.state, confirmed: result?.confirmed === true, job_id: explicitJobId })
+              const result = await bridge.send('job_pause', { job_id: explicitJobId }, 15000) as { paused?: boolean; state?: string; confirmed?: boolean } | undefined
+              console.log(`[dsh-femo] pause (explicit) sid=${sessionId} job=${explicitJobId} -> paused=${result?.paused === true} state=${String(result?.state ?? '-')} confirmed=${result?.confirmed === true}`)
+              writeJson(res, 200, { ok: true, paused: result?.paused === true, state: result?.state, confirmed: result?.confirmed === true, job_id: explicitJobId })
             } catch (error: unknown) {
               const msg = String(error instanceof Error ? error.message : error)
-              console.log(`[dsh-femo] stop (explicit) sid=${sessionId} job=${explicitJobId} FAILED: ${msg}`)
+              console.log(`[dsh-femo] pause (explicit) sid=${sessionId} job=${explicitJobId} FAILED: ${msg}`)
               // 214 事故主形态：bridge 无回应（超时）=引擎侧已不可达——错误面板
               // 留痕（此前仅 console.log，femoGen 里零感知）。
-              recordError(sessionId, `⏹ 停止失败：引擎无响应（${msg}）。引擎可能已僵死，重启宿主后对账恢复`)
-              pushDiag('stop', `FAILED (explicit) sid=${sessionId} job=${explicitJobId}: ${msg}`)
+              recordError(sessionId, `⏸ 暂停失败：引擎无响应（${msg}）。引擎可能已僵死，重启宿主后对账恢复`)
+              pushDiag('pause', `FAILED (explicit) sid=${sessionId} job=${explicitJobId}: ${msg}`)
               writeJson(res, 404, { ok: false, error: msg })
             }
             return
@@ -294,21 +294,21 @@ export function registerRoutes(ctx: Context, deps: RoutesDeps): void {
           const jobId = job?.state === 'running' && runState.activeJobId === job?.jobId
             ? job?.jobId
             : undefined
-          console.log(`[dsh-femo] stop sid=${sessionId} mirrorJob=${String(job?.jobId ?? '-')} activeJobId=${String(runState.activeJobId ?? '-')} -> resolved=${String(jobId ?? 'none')}`)
+          console.log(`[dsh-femo] pause sid=${sessionId} mirrorJob=${String(job?.jobId ?? '-')} activeJobId=${String(runState.activeJobId ?? '-')} -> resolved=${String(jobId ?? 'none')}`)
           if (jobId === undefined) {
-            writeJson(res, 200, { ok: true, stopped: false, note: '该会话无活跃剧本' })
+            writeJson(res, 200, { ok: true, paused: false, note: '该会话无活跃剧本' })
             return
           }
-          // 结构化消费：job_stop 幂等（suspended/finished/failed 照样回执），
+          // 结构化消费：job_pause 幂等（suspended/finished/failed 照样回执），
           // 失败（no_such_job 等）原话上浮 + 错误面板留痕（非静默）——B5 死于结构。
           try {
-            const result = await bridge.send('job_stop', { job_id: jobId }, 15000) as { stopped?: boolean; state?: string; confirmed?: boolean } | undefined
-            console.log(`[dsh-femo] stop (mirror) sid=${sessionId} job=${jobId} -> stopped=${result?.stopped === true} state=${String(result?.state ?? '-')} confirmed=${result?.confirmed === true}`)
-            writeJson(res, 200, { ok: true, stopped: result?.stopped === true, state: result?.state, confirmed: result?.confirmed === true, job_id: jobId })
+            const result = await bridge.send('job_pause', { job_id: jobId }, 15000) as { paused?: boolean; state?: string; confirmed?: boolean } | undefined
+            console.log(`[dsh-femo] pause (mirror) sid=${sessionId} job=${jobId} -> paused=${result?.paused === true} state=${String(result?.state ?? '-')} confirmed=${result?.confirmed === true}`)
+            writeJson(res, 200, { ok: true, paused: result?.paused === true, state: result?.state, confirmed: result?.confirmed === true, job_id: jobId })
           } catch (error: unknown) {
             const msg = String(error instanceof Error ? error.message : error)
-            recordError(sessionId, `⏹ 停止失败：引擎无响应（${msg}）。引擎可能已僵死，重启宿主后对账恢复`)
-            pushDiag('stop', `FAILED (mirror) sid=${sessionId} job=${jobId}: ${msg}`)
+            recordError(sessionId, `⏸ 暂停失败：引擎无响应（${msg}）。引擎可能已僵死，重启宿主后对账恢复`)
+            pushDiag('pause', `FAILED (mirror) sid=${sessionId} job=${jobId}: ${msg}`)
             writeJson(res, 500, { ok: false, error: msg })
           }
         })().catch((error: unknown) => {
@@ -350,10 +350,11 @@ export function registerRoutes(ctx: Context, deps: RoutesDeps): void {
         writeJson(res, 200, { ok: true, scopes: out })
       },
     })
-    // femoGen 画布控制面（Job 模型 §8.4）：pause/resume 路由整条退役（引擎无
-    // 暂停语义 stop=suspended 覆盖；C3 死路由）——「继续」由画布运行按钮的
-    // resume 语义（POST /run 不带 reset）与 femo-run resume 承担。human-input
-    // 保留（human 节点输入）。
+    // femoGen 画布控制面（Job 模型 §8.4）：旧的硬暂停 pause/resume 路由整条
+    // 退役（C3 死路由）——「继续」由画布运行按钮的 resume 语义（POST /run
+    // 不带 reset）与 femo-run resume 承担。human-input 保留（human 节点输入）。
+    // 【2026-09-12 stop→pause 全链路改名】上方的「暂停」路由即原 /dsh-femo/stop
+    // 改名而来（语义一贯=suspended 挂起可续跑，命名自此对齐）。
     webServer.register({
       kind: 'exact',
       path: '/dsh-femo/jobs',
@@ -689,13 +690,13 @@ export function registerRoutes(ctx: Context, deps: RoutesDeps): void {
                 lastError = state.error
               }
               // 【状态不一致自动收口（2026-09-12 用户拍板）】引擎档案与宿主镜像
-              // 对「running」的认定相左时，双侧一律收口为挂起：先发 job_stop
-              // 停止信号（引擎侧真在跑=停下挂起、断点保留可续跑；已不在跑=
+              // 对「running」的认定相左时，双侧一律收口为挂起：先发 job_pause
+              // 暂停信号（引擎侧真在跑=停下挂起、断点保留可续跑；已不在跑=
               // 幂等回执，档案不会被误写），再把宿主镜像对齐到引擎回执的终态。
               // 只走 API 不摸引擎档案文件；且仅限本宿主拥有的 session
               // （sessionsStore 里有）——别的进程/宿主的 Job 一个不碰（214 红线）。
               // 例外：引擎回执 finished/failed 时以引擎真相为准——终态档案没有
-              // API 可以改写成挂起（job_stop 幂等原样回执），强行把镜像降成
+              // API 可以改写成挂起（job_pause 幂等原样回执），强行把镜像降成
               // 挂起反而反向制造不一致+「可续跑」假象。
               const mirror = runState.jobs.get(jobId)
               const mirrorRunning = mirror !== undefined && mirror.state === 'running'
@@ -713,37 +714,37 @@ export function registerRoutes(ctx: Context, deps: RoutesDeps): void {
                 broadcastProjectionState(runState, mainSid)
               }
               if (sessionKnown && mirrorRunning !== engineRunning) {
-                console.log(`[dsh-femo] session-state 状态不一致收口: job=${jobId} sid=${mainSid.slice(-12)} 引擎=${jobState} 镜像=${mirror?.state ?? '无'} → 发送 job_stop`)
-                pushDiag('session-state', `状态不一致 job=${jobId} 引擎=${jobState} 镜像=${mirror?.state ?? '无'} → job_stop 收口`)
-                let stopState: string | undefined
+                console.log(`[dsh-femo] session-state 状态不一致收口: job=${jobId} sid=${mainSid.slice(-12)} 引擎=${jobState} 镜像=${mirror?.state ?? '无'} → 发送 job_pause`)
+                pushDiag('session-state', `状态不一致 job=${jobId} 引擎=${jobState} 镜像=${mirror?.state ?? '无'} → job_pause 收口`)
+                let pauseState: string | undefined
                 try {
-                  const stop = await bridge.send('job_stop', { job_id: jobId }, 15000) as { stopped?: boolean; state?: string } | undefined
-                  stopState = stop?.state
+                  const pause = await bridge.send('job_pause', { job_id: jobId }, 15000) as { paused?: boolean; state?: string } | undefined
+                  pauseState = pause?.state
                 } catch (error: unknown) {
-                  // 停止信号失败（no_such_job/桥抖动）：按查询到的引擎状态对齐镜像
-                  console.log(`[dsh-femo] session-state job_stop 收口失败，按查询状态对齐: ${String(error instanceof Error ? error.message : error)}`)
+                  // 暂停信号失败（no_such_job/桥抖动）：按查询到的引擎状态对齐镜像
+                  console.log(`[dsh-femo] session-state job_pause 收口失败，按查询状态对齐: ${String(error instanceof Error ? error.message : error)}`)
                 }
                 if (!engineRunning) {
                   // 宿主说跑、引擎说不跑：镜像落到引擎终态——suspended=两边同
                   // 挂起；finished/failed=引擎真相优先（见上方例外注释）。
-                  const finalState = (stopState ?? jobState) as JobMirror['state']
+                  const finalState = (pauseState ?? jobState) as JobMirror['state']
                   settleMirror(finalState)
                   jobState = finalState
-                } else if (stopState === 'running') {
+                } else if (pauseState === 'running') {
                   // 引擎说跑、宿主不认（宿主重启后镜像丢失的僵尸场）：stop_job
-                  // 的有挂靠路径回执时档案仍是 running（优雅停止在途）——prearm
-                  // 认领镜像，让随后的 flow_stopped 走既有管道收口（suspended+
+                  // 的有挂靠路径回执时档案仍是 running（优雅暂停在途）——prearm
+                  // 认领镜像，让随后的 flow_paused 走既有管道收口（suspended+
                   // 全窗通知+主模型 steer）。事件若丢，下次打开本接口再兜底。
                   settleMirror('running')
                 } else {
-                  // 无挂靠的直接落盘路径（stop_job 回执已带终态）或幂等回执：
+                  // 无挂靠的直接落盘路径（pause_job 回执已带终态）或幂等回执：
                   // 引擎已终态化，镜像直接对齐。
-                  const finalState = (stopState ?? 'suspended') as JobMirror['state']
+                  const finalState = (pauseState ?? 'suspended') as JobMirror['state']
                   settleMirror(finalState)
                   jobState = finalState
                 }
               } else if (mirrorRunning && !engineRunning) {
-                // 旧单向自愈保留（非本宿主 session，不发停止信号）：镜像
+                // 旧单向自愈保留（非本宿主 session，不发暂停信号）：镜像
                 // running、引擎已终态——以引擎为准降级并广播 run_state，只降
                 // 不升：running 镜像不会从引擎旧终态"复活"。
                 jobMirrorSetState(runState, jobId, jobState as JobMirror['state'])

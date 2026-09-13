@@ -27,13 +27,13 @@
  *      typed in the main window runs a full native turn even mid-script).
  *      idle Femo sessions run the main model normally.
  *   3. Engine bridge: managed Python subprocess (femo_bridge.py), NDJSON
- *      over stdio. run/pause/resume/stop/human_input/list_scripts/ping/
+ *      over stdio. run/pause/resume/human_input/list_scripts/ping/
  *      shutdown. LLM key resolved from ctx.credentials per run.
  *   4. Event bridge: engine events are re-emitted as cordis
  *      'dsh-femo/event'; the event switch turns them into projected chat
  *      lines and main-model notices.
  *   5. Input bridge: user messages on the running Femo session are forwarded
- *      as human input while a human node waits, or hard-stop the run
+ *      as human input while a human node waits, or hard-pause the run (job_pause)
  *      (interrupt semantics) while the engine is working.
  *
  * NOTE: ctx.logger output is not reliably visible in this deployment, so
@@ -392,9 +392,14 @@ export async function apply(ctx: Context, config: unknown): Promise<void> {
   }, 'dsh-femo: awakened projection windows')
 
   // persistence.list 指纹缓存（2026-08-30 会话列表卡死修复）：session.list /
-  // session.history 的全量 header 扫描从 3.5~10s 降到 ~50ms；卸载即恢复裸方法。
-  // 2026-09-08: 0.1.3-alpha.2 实验实例上该缓存把冷会话从 web 会话列表里弄空（list RPC 只剩 live 会话），暂时停用。恢复前需排查 list-cache 与 0.1.3 列表管线的兼容性。
-  // ctx.effect(() => installPersistenceListCache(ctx), 'dsh-femo: persistence list cache')
+  // session.history 的全量 header 扫描降到 ~50ms；卸载即恢复裸方法。
+  // 停用史：2026-09-08 因 0.1.3-alpha.2 实验实例上冷会话从列表消失而停用。
+  // 2026-09-12 复盘并恢复：根因是 0.1.3+ 官方消费方改用 persistence.list({ signal })
+  // 选项对象传参，包装层按裸 signal 解析直接 TypeError（list RPC 全体失败）。
+  // list-cache.ts 已兼容两种传法；当前实例 0.1.5-rc.1 的列表链路为
+  // ApiSessionList.list → sessionQuery.listSessions → SessionCorpus.listSessions
+  // → persistence.list()（SQLite 索引只加速搜索，不接管列表），缓存包装点仍是热路径。
+  ctx.effect(() => installPersistenceListCache(ctx), 'dsh-femo: persistence list cache')
 
   // ── 主模型专用工具：femo-mount（挂载剧本到会话）/ femo-run（控制运行）。
   //    执行体复用现有链路（writeSessionScript / startRunOnSession），只注入依赖。
@@ -513,23 +518,23 @@ export async function apply(ctx: Context, config: unknown): Promise<void> {
       const activeId = runState.activeJobId
       return { ok: true, jobId: activeId ?? jobId ?? -1 }
     },
-    stopScript: async (sessionId) => {
-      // stop 不带 job_id（2026-09-06 猫猫拍板）：自动停本会话正在运行的
-      // Job——与前端 stop 路由同款镜像解析（running + 活跃指针双判定）。
+    pauseScript: async (sessionId) => {
+      // pause 不带 job_id（2026-09-06 猫猫拍板）：自动停本会话正在运行的
+      // Job——与前端 pause 路由同款镜像解析（running + 活跃指针双判定）。
       // 镜像不满足（没跑过/已挂起/重启后镜像空）一律按"无活跃剧本"回，
-      // 不裸发 job_stop——引擎对 finished Job 也回 stopped:true，会误报成功。
+      // 不裸发 job_pause——引擎对 finished Job 也回 paused:true，会误报成功。
       const job = activeJobOfSession(runState, sessionId)
       const targetId = job?.state === 'running' && runState.activeJobId === job.jobId
         ? job.jobId
         : undefined
       if (targetId === undefined) {
-        console.log(`[dsh-femo] femo-run stop ${sessionId} -> no running job (mirror=${String(job?.jobId ?? '-')}, active=${String(runState.activeJobId ?? '-')})`)
-        return { stopped: false }
+        console.log(`[dsh-femo] femo-run pause ${sessionId} -> no running job (mirror=${String(job?.jobId ?? '-')}, active=${String(runState.activeJobId ?? '-')})`)
+        return { paused: false }
       }
-      // job_stop 幂等回执；no_such_job 等失败原话上浮为工具 ❌。
-      const result = await bridge.send('job_stop', { job_id: targetId }, 15000) as { stopped?: boolean; state?: string } | undefined
-      console.log(`[dsh-femo] femo-run stop ${sessionId} job=${String(targetId)} -> stopped=${result?.stopped === true} state=${String(result?.state ?? '-')}`)
-      return { stopped: result?.stopped === true, state: result?.state, jobId: targetId }
+      // job_pause 幂等回执；no_such_job 等失败原话上浮为工具 ❌。
+      const result = await bridge.send('job_pause', { job_id: targetId }, 15000) as { paused?: boolean; state?: string } | undefined
+      console.log(`[dsh-femo] femo-run pause ${sessionId} job=${String(targetId)} -> paused=${result?.paused === true} state=${String(result?.state ?? '-')}`)
+      return { paused: result?.paused === true, state: result?.state, jobId: targetId }
     },
     listJobs: async () => {
       const result = await bridge.send('list_jobs', {}, 15000) as { jobs?: Array<{ job_id: number; state: string; reason: string; waiting_human: boolean; femo_session_id: number | null; host_ref: string; script_name: string; created_at: string; updated_at: string; has_breakpoint: boolean }> } | undefined

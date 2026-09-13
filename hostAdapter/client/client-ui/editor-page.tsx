@@ -32,13 +32,13 @@ export interface EditorPageInjected {
   /** sessionId 带上则 host 顺写会话记录 {path, text}（导出/覆盖保存统一格式）。 */
   saveScript(name: string, content: string, sessionId?: string): Promise<string>
   runScript(sessionId: string, scriptPath?: string): Promise<void>
-  /** 停止本会话的活跃 Job（§8.4 B3：stop 归属解析——sessionId 必填，
+  /** 暂停本会话的活跃 Job（§8.4 B3：pause 归属解析——sessionId 必填，
    *  只认本会话绑定，不再"停别家的戏"）。jobId 可选显式指定（宿主按引擎
-   *  档案 host_ref 裁决）。resolve 值带回执：stopped:false=该会话无活跃
+   *  档案 host_ref 裁决）。resolve 值带回执：paused:false=该会话无活跃
    *  剧本（前端据此复位运行按钮，2026-09-06 反馈断链修复）；state=引擎侧
-   *  Job 现态（stopped:true 但 state 非 running=幂等无操作，前端知情提示）。
+   *  Job 现态（paused:true 但 state 非 running=幂等无操作，前端知情提示）。
    *  失败原样 throw（2026-09-07：不再吞成 undefined——femoGen 可见报错）。 */
-  stopScript(sessionId: string, jobId?: number): Promise<{ stopped?: boolean; state?: string } | undefined>
+  pauseScript(sessionId: string, jobId?: number): Promise<{ paused?: boolean; state?: string } | undefined>
   fetchErrors(sessionId: string): Promise<Array<{ ts: number; text: string }>>
   /** 打开 dsh 侧边栏（手机版 femoGen 返回键回调）。 */
   toggleSidebar(): void
@@ -269,7 +269,7 @@ type PageState = {
   rev?: number
   checkpoint: Record<string, string>
   running?: boolean
-  /** 当前 Job 索引（宿主会话记录的 currentJobId）——femoGen 停止/继续显式
+  /** 当前 Job 索引（宿主会话记录的 currentJobId）——femoGen 暂停/继续显式
    *  带号、断点覆盖层的数据源。 */
   jobId?: number
   /** 本会话激活过的全部 Job（历史场次回放/续跑候选）。 */
@@ -475,12 +475,12 @@ function FemoEditorPage({ sessionId, injected }: { sessionId: string; injected: 
     }
     throw new Error(message)
   }
-  const onStop = async (jobId?: number): Promise<{ stopped?: boolean; state?: string } | undefined> => {
-    // 回执透传（stopped:false=无活跃剧本）——femoGen 据此复位运行按钮
-    // （2026-09-06 反馈断链修复：此前该结果被静默吞掉，按钮卡死在"停止"态）。
+  const onPause = async (jobId?: number): Promise<{ paused?: boolean; state?: string } | undefined> => {
+    // 回执透传（paused:false=无活跃剧本）——femoGen 据此复位运行按钮
+    // （2026-09-06 反馈断链修复：此前该结果被静默吞掉，按钮卡死在"暂停"态）。
     // 【2026-09-07 214 事故收尾】失败不再吞成本函数 undefined（femoGen 零感知
-    // 的静默链终点）——原样上抛，由画布的停止反馈条可见报错。
-    return await injected.stopScript(sessionId, jobId)
+    // 的静默链终点）——原样上抛，由画布的暂停反馈条可见报错。
+    return await injected.pauseScript(sessionId, jobId)
   }
 
   /** 「未改动」提醒弹窗状态：onExport 挂起等待用户裁决（依然保存/另存为/返回画布）。 */
@@ -610,7 +610,7 @@ function FemoEditorPage({ sessionId, injected }: { sessionId: string; injected: 
         sessionId={sessionId}
         enginePending={state?.pending === true}
         onRun={onRun}
-        onStop={onStop}
+        onPause={onPause}
         onPersistScript={persistScript}
         getRecordScript={getRecordScript}
         onExport={onExport}

@@ -66,7 +66,7 @@ class HumanInputManager:
         with self._lock:
             if self._aborted:
                 # 机制性停止识别：job 已停止，等待点在入口即退出（不上 executor）
-                raise CancelledError("job stopped")
+                raise CancelledError("job paused")
             if key in self._data:
                 print(f"[AsyncEngine] 📩 人类输入已抢先到达 (key={key})")
                 return self._data.pop(key, "")
@@ -75,7 +75,7 @@ class HumanInputManager:
         with self._lock:
             # double-check：注册 event 前再检查一次，防止 provide_input 在上锁间隙到达
             if self._aborted:
-                raise CancelledError("job stopped")
+                raise CancelledError("job paused")
             if key in self._data:
                 print(f"[AsyncEngine] 📩 人类输入在注册 event 时已到达 (key={key})")
                 return self._data.pop(key, "")
@@ -88,7 +88,7 @@ class HumanInputManager:
             # 在此恢复点直接吃 CancelledError 零推进，不会拿着空值继续演）
             with self._lock:
                 if self._aborted:
-                    raise CancelledError("job stopped")
+                    raise CancelledError("job paused")
                 return self._data.pop(key, "")
         finally:
             with self._lock:

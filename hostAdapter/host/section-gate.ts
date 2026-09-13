@@ -40,7 +40,7 @@ function actorKeyOf(sid: string, actorKey: string): string {
 }
 
 class SectionGate {
-  private queues = new Map<string, Entry[]>()
+  private queues = new Map<string, GateEntry[]>()
   private actorLast = new Map<string, { promise: Promise<void>; resolve: () => void }>()
 
   /** 节点开跑（ai_request 处理起点）登记：占据本区块在 FIFO 里的顺位。
@@ -52,7 +52,7 @@ class SectionGate {
       this.queues.set(sid, q)
     }
     if (q.some(e => e.turn === turn)) return
-    const entry: Entry = { turn, actorKey, ready: false }
+    const entry: GateEntry = { turn, actorKey, ready: false }
     let resolve!: () => void
     const promise = new Promise<void>(r => { resolve = r })
     entry.hook = { promise, resolve }

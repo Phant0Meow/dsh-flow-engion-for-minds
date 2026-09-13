@@ -28,7 +28,7 @@ import { installFemoLogCapture, subscribeFemoLog, femoLogTail, clearFemoLog } fr
 import { FemoPreview } from './femoPreview';
 import { MobileLayout, useMobile } from './mobileView';
 import { FEMO_THEMES } from './themes';
-import { FaPalette, FaUserPlus, FaTerminal, FaPlay, FaStop, FaForward, FaFolderOpen, FaFloppyDisk, FaSpinner } from './faIcons';
+import { FaPalette, FaUserPlus, FaTerminal, FaPlay, FaPause, FaForward, FaFolderOpen, FaFloppyDisk, FaSpinner } from './faIcons';
 
 // 前端日志采集（2026-09-11）：模块加载即装钩子——femoGen 两种入口（插件内嵌经
 // editor-page 引入本模块 / 独立 vite 经 main.jsx）都会走到这里，等于"页面一加载
@@ -38,7 +38,7 @@ installFemoLogCapture();
 // ═══ 工具栏芯片（2026-09-11 统一重造）═══
 // 桌面右上角（运行控制 + 文件读写）一组成员的唯一施工图：同一高度/内边距/圆角/
 // 字号/图标尺寸 + 短文案，**每枚都带 FA 图标**，只靠色调分语义——
-//   绿=从头跑 / 红=停 / 琥珀=续跑 / 中性=文件读写（导入·导出）。
+//   绿=从头跑 / 红=暂停 / 琥珀=续跑 / 中性=文件读写（导入·导出）。
 // 配方与底部三键（.femo-setting-btn 家族）同源：minHeight 30 芯片家族高度、
 // gap 6、FA 图标 size 12、按压回缩反馈（hover 规则会被内联底色盖掉，同底部三键）。
 // 与手机端 32×32 图标芯片同族（同图标、同语义色），桌面端多带文字标签。
@@ -224,7 +224,7 @@ function summarizeDebugEvent(type, data) {
   switch (type) {
     case 'flow_start':        return { level: 'info',  text: `${node}剧本开始运行` };
     case 'flow_done':         return { level: 'info',  text: '剧本运行完成' };
-    case 'flow_stopped':      return { level: 'info',  text: '剧本已停止' };
+    case 'flow_paused':      return { level: 'info',  text: '剧本已暂停' };
     case 'flow_error':        return { level: 'error', text: `${node}${d.error || '未知错误'}` };
     case 'notify_author': {
       // 后端字段=severity（'fatal' | 'agent_error' | 'agent_giveup' | 'warning'）。
@@ -311,12 +311,12 @@ const mainCheckpointLabel = (checkpoint) => {
   return typeof first === 'string' && first.length > 0 ? first : null;
 };
 
-const FEMOEditor = forwardRef(function FEMOEditor({ plugin = false, onRun, onStop, initialScript, initialCheckpoint, initialRunning = false, onExport, onImport, onListFemoFiles, onPickFemoFile, savedPath, onBackToShell, onRestoreError, onPersistScript, getRecordScript, sessionId = '', enginePending = false, initialJobId, jobIds, initialWaitingHuman, initialLastError } = {}, ref) {
-// 插件模式：由 dsh-femo 注入（plugin=true）——运行/停止走插件回调，
+const FEMOEditor = forwardRef(function FEMOEditor({ plugin = false, onRun, onPause, initialScript, initialCheckpoint, initialRunning = false, onExport, onImport, onListFemoFiles, onPickFemoFile, savedPath, onBackToShell, onRestoreError, onPersistScript, getRecordScript, sessionId = '', enginePending = false, initialJobId, jobIds, initialWaitingHuman, initialLastError } = {}, ref) {
+// 插件模式：由 dsh-femo 注入（plugin=true）——运行/暂停走插件回调，
 // SSE 连插件广播路由；独立模式保留原后端调用（getBackendBaseUrl）。
 // initialScript/initialCheckpoint/initialRunning：会话恢复（刷新/重启/运行中打开）。
 // initialJobId/jobIds：宿主会话记录的 currentJobId + 激活过的全部 Job（2026-09-06
-// job 快照改造）——停止/继续显式带号（镜像滞后也能停），jobIds 供历史场次 UI。
+// job 快照改造）——暂停/继续显式带号（镜像滞后也能停），jobIds 供历史场次 UI。
 // initialLastError：上一个 failed Job 的存档错误（2026-09-10）——只进调试窗
 // 日志（刷新/重开复见），不拦画布、不弹横幅。
 // 【2026-09-07 B1 拆除】宿主侧 jobScriptMatches 预判退役：跑前草稿定版
@@ -460,7 +460,7 @@ const FEMOEditor = forwardRef(function FEMOEditor({ plugin = false, onRun, onSto
   // ═══ 调试窗口（2026-09-07 正式化）═══
   // 后端运行信息/报错的常驻日志流：新条目插最前，旧的被刷下去，上限 200 条
   // 自动淘汰最老——清空时机不用人操心。喂食点：SSE 事件（handleWorkflowEvent
-  // 统一入口）、运行/停止/导出等本地生命周期、语法检查报错。
+  // 统一入口）、运行/暂停/导出等本地生命周期、语法检查报错。
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugLog, setDebugLog] = useState([]);   // [{ id, ts, level, kind, text }]，新在前
   const debugSeqRef = useRef(0);
@@ -606,29 +606,29 @@ const FEMOEditor = forwardRef(function FEMOEditor({ plugin = false, onRun, onSto
     }, 4000);
   }, [pushDebug]);
 
-  // 停止反馈条（2026-09-07 214 事故收尾——停止链路静默吞错修复）：
-  // stopNotice={level:'error'|'warning', text, id}——error=请求本身失败
+  // 暂停反馈条（2026-09-07 214 事故收尾——暂停链路静默吞错修复）：
+  // pauseNotice={level:'error'|'warning', text, id}——error=请求本身失败
   // （HTTP 错/超时/异常，动作被拒）；warning=请求受理但引擎未确认（8s 无
-  // flow_stopped，或回执 state 已非 running=幂等无操作）。锚在工具栏右下方
+  // flow_paused，或回执 state 已非 running=幂等无操作）。锚在工具栏右下方
   // （exportToast 上方一行），8s 自动消失。
-  const [stopNotice, setStopNotice] = useState(null);
-  const stopNoticeTimerRef = useRef(null);
-  const stopConfirmTimerRef = useRef(null);   // 停止受理后的引擎确认计时器
-  const showStopNotice = useCallback((level, text) => {
-    if (stopNoticeTimerRef.current) clearTimeout(stopNoticeTimerRef.current);
+  const [pauseNotice, setStopNotice] = useState(null);
+  const pauseNoticeTimerRef = useRef(null);
+  const pauseConfirmTimerRef = useRef(null);   // 暂停受理后的引擎确认计时器
+  const showPauseNotice = useCallback((level, text) => {
+    if (pauseNoticeTimerRef.current) clearTimeout(pauseNoticeTimerRef.current);
     setStopNotice({ level, text, id: Date.now() });
     // 调试窗口留档：黄/红条 8s 就消失，日志里常驻可查
-    pushDebug(level === 'error' ? 'error' : 'warn', '停止', text);
-    stopNoticeTimerRef.current = setTimeout(() => {
+    pushDebug(level === 'error' ? 'error' : 'warn', '暂停', text);
+    pauseNoticeTimerRef.current = setTimeout(() => {
       setStopNotice(null);
-      stopNoticeTimerRef.current = null;
+      pauseNoticeTimerRef.current = null;
     }, 8000);
   }, [pushDebug]);
-  // 引擎确认（flow_stopped / run_state 终态）到达即撤计时器——确认了就不提示。
-  const clearStopConfirmTimer = useCallback(() => {
-    if (stopConfirmTimerRef.current) {
-      clearTimeout(stopConfirmTimerRef.current);
-      stopConfirmTimerRef.current = null;
+  // 引擎确认（flow_paused / run_state 终态）到达即撤计时器——确认了就不提示。
+  const clearPauseConfirmTimer = useCallback(() => {
+    if (pauseConfirmTimerRef.current) {
+      clearTimeout(pauseConfirmTimerRef.current);
+      pauseConfirmTimerRef.current = null;
     }
   }, []);
 
@@ -688,9 +688,9 @@ const [userApiModel, setUserApiModel] = useState(() => {
   const [apiModelInput, setApiModelInput] = useState(userApiModel);
   const [runId, setRunId] = useState(null);
   // 插件模式当前 Job 号（2026-09-06 job 快照改造）：初值=宿主会话记录的
-  // currentJobId，之后跟随 SSE 事件信封的 job_id 实时刷新（开跑/续跑/停止
-  // 全覆盖）。停止/继续按钮显式带号——宿主内存镜像滞后/丢失（146 事故）
-  // 也能正确停。
+  // currentJobId，之后跟随 SSE 事件信封的 job_id 实时刷新（开跑/续跑/暂停
+  // 全覆盖）。暂停/继续按钮显式带号——宿主内存镜像滞后/丢失（146 事故）
+  // 也能正确暂停。
   const [pluginJobId, setPluginJobId] = useState(initialJobId ?? null);
   useEffect(() => {
     // session-state 重载（script_changed/切换回来）带来宿主侧最新指针；
@@ -700,7 +700,7 @@ const [userApiModel, setUserApiModel] = useState(() => {
   const [nodeStates, setNodeStates] = useState({}); // { [nodeId]: { status, streamingText, output, prompt, history } }
   const eventSourceRef = useRef(null);
   const humanInputResolveRef = useRef(null); // 用于人类输入的 Promise resolve
-  // 本地最近一次运行控制操作（运行/停止/继续）时刻：SSE 接通时的快照校准
+  // 本地最近一次运行控制操作（运行/暂停/继续）时刻：SSE 接通时的快照校准
   // 在此窗口内跳过，防止校准把用户刚点出来的按钮态闪回去（见 connectSse）。
   const lastActionAtRef = useRef(0);
 
@@ -848,7 +848,7 @@ const [userApiModel, setUserApiModel] = useState(() => {
       }
       return [...prev, entry];
     });
-    // 同值短路（2026-08-24 连接线丢失 bug 放大器修复）：flow_done/done/flow_stopped
+    // 同值短路（2026-08-24 连接线丢失 bug 放大器修复）：flow_done/done/flow_paused
     // 在主流程时 targetPath 与当前同值，但原写法每次传新数组实例 → locationPath
     // 引用必变 → E915 无谓重载画布（竞态窗口内会加载到坏条目）。同值时保持引用，
     // React bail out；路径真变时行为逐字节不变。
@@ -1702,7 +1702,7 @@ if (specialType === 'FOR') {
     console.log('[handleRunWorkflow] ====== 准备启动 ======');
     console.log('[handleRunWorkflow] flowStatus:', flowStatus);
     // 【2026-09-10 拍板改】运行守卫不信本地 flowStatus——页面不可能知道剧本
-    // 在没在跑（SSE 丢失会让本地 running 成为残影：停止黄条+重跑无响应事故）。
+    // 在没在跑（SSE 丢失会让本地 running 成为残影：暂停黄条+重跑无响应事故）。
     // 本地 running 只当作"该去问"的触发条件：拿会话/Job 问宿主（代理引擎
     // get_job_state，含懒对账），引擎档案说了算。说在跑才拦；说没在跑则本地
     // 状态是残影，放行并校正按钮。询问失败不拦——宿主 GUARD 409 仍兜底。
@@ -1713,7 +1713,7 @@ if (specialType === 'FOR') {
         const resp = await fetch(`/dsh-femo/session-state?${qs.toString()}`);
         const st = await resp.json().catch(() => ({}));
         if (st?.state === 'running' || st?.running === true) {
-          pushDebug('warn', '运行', '引擎侧该 Job 仍在运行——先停止或等它挂起再跑');
+          pushDebug('warn', '运行', '引擎侧该 Job 仍在运行——先暂停或等它挂起再跑');
           return;
         }
         setFlowStatus('idle');
@@ -1880,37 +1880,37 @@ es.onmessage = (event) => {
     await handleRunWorkflow(record);
   }
 
-  // ── 停止工作流 ──
+  // ── 暂停工作流 ──
   // 【2026-09-07 214 事故收尾——静默吞错修复】三级反馈，杜绝"按了没反应"：
   //  ① 请求失败（HTTP 错/超时/异常）→ 红条 error（动作被拒）；
-  //  ② stopped:true 但回执 state 已非 running → 引擎侧没有活跃执行体被停
+  //  ② paused:true 但回执 state 已非 running → 引擎侧没有活跃执行体被暂停
   //     （幂等无操作——214 实锤形态），按引擎回执校准按钮 + 黄条知情；
-  //  ③ stopped:true 且 state==='running' → 受理成功，8s 内没等到引擎确认
-  //     （flow_stopped/run_state 终态，计时器在此二处清理）→ 黄条警示。
-const handleStopWorkflow = useCallback(async () => {
+  //  ③ paused:true 且 state==='running' → 受理成功，8s 内没等到引擎确认
+  //     （flow_paused/run_state 终态，计时器在此二处清理）→ 黄条警示。
+const handlePauseWorkflow = useCallback(async () => {
     if (!runId && !plugin) return;
     lastActionAtRef.current = Date.now();
-    clearStopConfirmTimer();
+    clearPauseConfirmTimer();
     try {
       let data;
       if (plugin) {
         // 显式带当前 Job 号（宿主按引擎档案 host_ref 裁决归属——镜像滞后
-        // 也能停）。onStop 失败会 throw（不再吞成 undefined）。
-        if (typeof onStop === 'function') {
-          data = await onStop(pluginJobId ?? undefined);
+        // 也能暂停）。onPause 失败会 throw（不再吞成 undefined）。
+        if (typeof onPause === 'function') {
+          data = await onPause(pluginJobId ?? undefined);
         } else {
           const qs = new URLSearchParams({ sessionId });
           if (pluginJobId !== null && pluginJobId !== undefined) qs.set('jobId', String(pluginJobId));
-          const resp = await fetch(`/dsh-femo/stop?${qs.toString()}`, { method: 'POST' });
+          const resp = await fetch(`/dsh-femo/pause?${qs.toString()}`, { method: 'POST' });
           data = await resp.json().catch(() => ({}));
-          if (!resp.ok) throw new Error(data?.error ?? `stop HTTP ${resp.status}`);
+          if (!resp.ok) throw new Error(data?.error ?? `pause HTTP ${resp.status}`);
         }
       } else {
-        const resp = await fetch(getBackendBaseUrl() + `/api/run/${runId}/stop`, { method: 'POST' });
+        const resp = await fetch(getBackendBaseUrl() + `/api/run/${runId}/pause`, { method: 'POST' });
         data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data?.error ?? `stop HTTP ${resp.status}`);
+        if (!resp.ok) throw new Error(data?.error ?? `pause HTTP ${resp.status}`);
       }
-      if (data && data.stopped === false) {
+      if (data && data.paused === false) {
         // 宿主说该会话无活跃剧本（页面状态残留）：按钮回空闲。
         setFlowStatus('idle');
         return;
@@ -1918,35 +1918,35 @@ const handleStopWorkflow = useCallback(async () => {
       const st = data && data.state;
       if (st && st !== 'running') {
         if (data.confirmed) {
-          // 【2026-09-10 停止确认竞态修复】confirmed=本次停止真实停掉了运行中
+          // 【2026-09-10 暂停确认竞态修复】confirmed=本次暂停真实停掉了运行中
           // 的 Job（引擎 join 后终态随回执到达）——当场确认收货：按钮回继续态、
-          // 不依赖 SSE flow_stopped（它先于回执广播，若按旧逻辑此刻才起 8s
+          // 不依赖 SSE flow_paused（它先于回执广播，若按旧逻辑此刻才起 8s
           // 计时器，确认已过、计时器永远等不到 → 黄条误报实锤）。
           setFlowStatus(st === 'suspended' ? 'paused' : 'idle');
-          showStopNotice('info', '已停止并挂起（断点保留，可继续）');
+          showPauseNotice('info', '已暂停（断点保留，可继续）');
           return;
         }
         // 幂等无操作（引擎档案已非 running——被对账改写/已收尾，没有活跃
-        // 执行体被停）：按钮按引擎回执校准，黄条知情（不冒充停止成功）。
+        // 执行体被暂停）：按钮按引擎回执校准，黄条知情（不冒充暂停成功）。
         setFlowStatus(st === 'suspended' ? 'paused' : 'idle');
-        showStopNotice('warning',
-          `停止已受理，但引擎侧该 Job 状态为 ${st}——没有活跃执行体被停止（可能此前已被挂起/对账）`);
+        showPauseNotice('warning',
+          `暂停已受理，但引擎侧该 Job 状态为 ${st}——没有活跃执行体被暂停（可能此前已被挂起/对账）`);
         return;
       }
-      // 受理成功：等引擎确认（flow_stopped → run_state suspended → 计时器清理）。
-      if (stopConfirmTimerRef.current) clearTimeout(stopConfirmTimerRef.current);
-      stopConfirmTimerRef.current = setTimeout(() => {
-        stopConfirmTimerRef.current = null;
-        showStopNotice('warning',
-          '停止请求已发出 8 秒仍未收到引擎确认——引擎可能已僵死（取消令牌未送达），请重启宿主/引擎后对账恢复');
+      // 受理成功：等引擎确认（flow_paused → run_state suspended → 计时器清理）。
+      if (pauseConfirmTimerRef.current) clearTimeout(pauseConfirmTimerRef.current);
+      pauseConfirmTimerRef.current = setTimeout(() => {
+        pauseConfirmTimerRef.current = null;
+        showPauseNotice('warning',
+          '暂停请求已发出 8 秒仍未收到引擎确认——引擎可能已僵死（取消令牌未送达），请重启宿主/引擎后对账恢复');
       }, 8000);
-      // 状态将由 flow_stopped 事件更新
+      // 状态将由 flow_paused 事件更新
     } catch (err) {
-      console.error('停止失败:', err);
+      console.error('暂停失败:', err);
       // 请求失败=动作被拒：红条可见报错（宿主侧同款已进错误面板），按钮不回退。
-      showStopNotice('error', `停止失败：${err?.message ?? err}`);
+      showPauseNotice('error', `暂停失败：${err?.message ?? err}`);
     }
-  }, [runId, plugin, onStop, sessionId, pluginJobId, showStopNotice, clearStopConfirmTimer]);
+  }, [runId, plugin, onPause, sessionId, pluginJobId, showPauseNotice, clearPauseConfirmTimer]);
 
   // ── 继续工作流 ──
   const handleResumeWorkflow = useCallback(async () => {
@@ -2061,7 +2061,7 @@ const handleStopWorkflow = useCallback(async () => {
   // 【2026-08-30 状态实时化】只关 run-scoped 的独立模式流（/api/run/<id>/stream，
   // 运行结束=流终，不关会被 EventSource 当 404 反复重连）；插件模式
   // /dsh-femo/events 是页面级常驻广播——连接必须保留才能收到后续场次事件
-  // （flow_start/flow_stopped 等），关了就退回「外部开演看不见」的老坑。
+  // （flow_start/flow_paused 等），关了就退回「外部开演看不见」的老坑。
   const closeRunScopedSse = useCallback(() => {
     const es = eventSourceRef.current;
     if (es && !String(es.url ?? '').includes('/dsh-femo/events')) {
@@ -2208,7 +2208,7 @@ const handleWorkflowEvent = useCallback((evt) => {
     // 事件整条丢弃（跨会话不串台）。独立模式无 sid 恒接受。
     if (plugin && data && data.sid !== undefined && data.sid !== sessionId) return;
     // 当前 Job 号实时跟随（所有带 job_id 的事件统一在此捕获——run_state 快照、
-    // flow_start/flow_stopped 信封全都带；见 pluginJobId 声明处注释）。
+    // flow_start/flow_paused 信封全都带；见 pluginJobId 声明处注释）。
     if (plugin && data && data.job_id !== undefined) {
       const jid = Number(data.job_id);
       if (Number.isFinite(jid) && jid > 0) setPluginJobId(jid);
@@ -2228,7 +2228,7 @@ const handleWorkflowEvent = useCallback((evt) => {
       // 【flowStatus 快照驱动（§11.2）】状态判定以宿主广播的快照为准
       // （B7 死于结构：不再有本地兜底覆盖）。
       const s = data?.state;
-      if (s !== 'running') clearStopConfirmTimer();   // 引擎确认到达（或终态校正）——撤停止确认计时器
+      if (s !== 'running') clearPauseConfirmTimer();   // 引擎确认到达（或终态校正）——撤暂停确认计时器
       if (s === 'running') setFlowStatus('running');
       else if (s === 'suspended') setFlowStatus('paused');
       else if (s === 'finished' || s === 'failed') setFlowStatus('idle');
@@ -2240,7 +2240,7 @@ const handleWorkflowEvent = useCallback((evt) => {
     // human_wait/node_retry 只恢复状态不自动弹气泡——已结束场次的残留
     // human_wait 在环里会被重放，无脑弹会鬼影），恢复完成后按序补放。
     if (plugin && !restoreDoneRef.current) {
-      const nodeScoped = !['flow_start', 'flow_done', 'flow_stopped', 'done', 'module_enter', 'module_exit', 'flow_error', 'notify_author'].includes(type);
+      const nodeScoped = !['flow_start', 'flow_done', 'flow_paused', 'done', 'module_enter', 'module_exit', 'flow_error', 'notify_author'].includes(type);
       if (nodeScoped) {
         pendingReplayRef.current.push({ ...evt, _replayed: true });
         return;
@@ -2250,7 +2250,7 @@ const handleWorkflowEvent = useCallback((evt) => {
     // 错误类事件可能无 node_name（worker 构造期异常）或节点不在当前画布
     // （模块/网关），旧白名单会把它们在匹配关卡整条吞掉（连 alert 都到不了
     // ——错误静默消失）。信封化后（宿主 §6.2.12）这两类直接下行走展示面。
-    const needsNodeMatch = !['flow_start', 'flow_done', 'flow_stopped', 'done', 'module_enter', 'module_exit', 'flow_error', 'notify_author'].includes(type);
+    const needsNodeMatch = !['flow_start', 'flow_done', 'flow_paused', 'done', 'module_enter', 'module_exit', 'flow_error', 'notify_author'].includes(type);
 
     let matchedNode = null;
     let nodeId = undefined;
@@ -2636,10 +2636,10 @@ case 'node_retry': {
         break;
       }
 
-      case 'flow_stopped':
-        // 停止=挂起（可续跑）：断点保留在引擎 runs 档案——按钮回「继续」态。
+      case 'flow_paused':
+        // 暂停=挂起（可续跑）：断点保留在引擎 runs 档案——按钮回「继续」态。
         // paused/pausedByUser 判定已退役（pause 语义 §11.2）。
-        clearStopConfirmTimer();   // 引擎确认到达——撤停止确认计时器（2026-09-07）
+        clearPauseConfirmTimer();   // 引擎确认到达——撤暂停确认计时器（2026-09-07）
         setFlowStatus('paused');
         setActiveNodeIds(new Set());
         closeRunScopedSse();
@@ -2732,7 +2732,7 @@ case 'node_retry': {
         console.warn('[FEMO] 收到未知事件类型:', type, data);
         break;
     }
-  }, [closeRunScopedSse, clearStopConfirmTimer, pushDebug]);
+  }, [closeRunScopedSse, clearPauseConfirmTimer, pushDebug]);
 
   // 连接插件 SSE 广播（运行中打开标签页也实时接入；已连接则先关闭重连）。
   const connectSse = useCallback(() => {
@@ -2746,7 +2746,7 @@ case 'node_retry': {
       // 【2026-09-06 多端状态统一】接通/重连即拉权威快照校准 flowStatus：
       // host /events 的重放缓冲只有 100 条，长跑剧本一开跑就把 run_state
       // 快照挤出去——手机/睡眠唤醒等后连设备靠重放学不到状态切换，按钮会
-      // 卡在旧态（桌面端点了停止→挂起，手机端不知道，右上角没有「从头」）。
+      // 卡在旧态（桌面端点了暂停→挂起，手机端不知道，右上角没有「从头」）。
       // 判定与恢复 effect 同源：running→运行；有断点→继续+从头；否则运行。
       // 【2026-09-11 v9】同一份快照兼作"接通浮层裁决"输入：重放帧一律不弹
       // （宿主 replay 标记），接通这一刻该弹什么由它说了算——运行中=人类等待
@@ -2890,7 +2890,7 @@ const submitHumanInput = useCallback(
     const hasVars = assignments && Object.keys(assignments).length > 0;
     // runId 守卫只约束独立模式：插件模式 runId 恒 null（运行由 host 驱动，
     // handleRunWorkflow 显式 setRunId(null)）——旧写法 `!runId ||` 让插件模式
-    // 的气泡输入永远在第一行静默返回。与 handleStopWorkflow 的
+    // 的气泡输入永远在第一行静默返回。与 handlePauseWorkflow 的
     // `!runId && !plugin` 同款口径（2026-09-06 修复）。
     if (!plugin && !runId) return fail('提交失败：运行未启动（独立模式缺 runId）。');
     if (!hasChat && !hasVars) return false;
@@ -3862,7 +3862,7 @@ nodes={nodes}
           flowStatus={flowStatus}
           hasActiveRunningNodes={hasActiveRunningNodes}
           onRun={() => handleRunWorkflow(undefined, 'human', { reset: true })}
-          onStop={handleStopWorkflow}
+          onPause={handlePauseWorkflow}
           onResume={handleResumeWorkflow}
           nodeStates={nodeStates}
           actionStore={actionStore}
@@ -4387,12 +4387,12 @@ nodes={nodes}
                 {exportToast.text}
               </div>
             )}
-            {/* 停止反馈条（2026-09-07 静默吞错修复）：error=请求失败（红）；
+            {/* 暂停反馈条（2026-09-07 静默吞错修复）：error=请求失败（红）；
                 warning=受理未确认/幂等无操作（黄）。锚在 exportToast 上方，
-                8s 自动消失（showStopNotice 统一管理）。 */}
-            {stopNotice !== null && (
+                8s 自动消失（showPauseNotice 统一管理）。 */}
+            {pauseNotice !== null && (
               <div
-                key={stopNotice.id}
+                key={pauseNotice.id}
                 style={{
                   position: 'absolute',
                   top: 'calc(100% + 6px)',
@@ -4408,12 +4408,12 @@ nodes={nodes}
                   wordBreak: 'break-all',
                   boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
                   background: 'var(--femo-panel-bg)',
-                  border: `1px solid ${stopNotice.level === 'error' ? 'var(--femo-danger, #d24b4b)' : stopNotice.level === 'info' ? 'var(--femo-ok, #4b9ad2)' : 'var(--femo-warn, #d29a4b)'}`,
-                  color: stopNotice.level === 'error' ? 'var(--femo-danger, #d24b4b)' : stopNotice.level === 'info' ? 'var(--femo-ok, #4b9ad2)' : 'var(--femo-warn, #d29a4b)',
+                  border: `1px solid ${pauseNotice.level === 'error' ? 'var(--femo-danger, #d24b4b)' : pauseNotice.level === 'info' ? 'var(--femo-ok, #4b9ad2)' : 'var(--femo-warn, #d29a4b)'}`,
+                  color: pauseNotice.level === 'error' ? 'var(--femo-danger, #d24b4b)' : pauseNotice.level === 'info' ? 'var(--femo-ok, #4b9ad2)' : 'var(--femo-warn, #d29a4b)',
                 }}
               >
-                {stopNotice.level === 'error' ? '⛔ ' : stopNotice.level === 'info' ? '✅ ' : '⚠️ '}
-                {stopNotice.text}
+                {pauseNotice.level === 'error' ? '⛔ ' : pauseNotice.level === 'info' ? '✅ ' : '⚠️ '}
+                {pauseNotice.text}
               </div>
             )}
             {/* 运行控制（2026-09-11 定型：**按钮恒定，只变展示**）——三枚按钮各自
@@ -4421,10 +4421,11 @@ nodes={nodes}
                 哪几枚（三枚与「导入/导出」同为 ToolChip 家族：同高度/内边距/圆角/
                 字号 + 各带一枚 FA 图标，只靠色调分语义）：
                   绿「运行」(FaPlay)      = fresh_start（reset:true 从头开演；未开跑与挂起态都出现）
-                  红「停止」(FaStop)      = stop（只在跑的时候出现）
-                  琥珀「继续」(FaForward) = resume（从断点续跑；只在 stop 之后的挂起态出现）
-                挂起态顺序=常驻的运行键在前、挂起专属的继续键在后。暂停按钮删除
-                （引擎无暂停语义——stop=suspended 可续跑）。状态实时化=run_state
+                  红「暂停」(FaPause)      = pause（只在跑的时候出现；2026-09-12
+                  用户点名 stop→pause 全链路改名——原「停止」键，语义即挂起可续跑）
+                  琥珀「继续」(FaForward) = resume（从断点续跑；只在暂停之后的挂起态出现）
+                挂起态顺序=常驻的运行键在前、挂起专属的继续键在后。（引擎无独立
+                硬暂停语义——pause=suspended 可续跑）。状态实时化=run_state
                 快照驱动。 */}
             {(flowStatus === 'idle' || flowStatus === 'paused') && (
               enginePending ? (
@@ -4444,12 +4445,12 @@ nodes={nodes}
             )}
             {flowStatus === 'running' && (
               <ToolChip
-                icon={FaStop}
+                icon={FaPause}
                 tone="danger"
-                onClick={handleStopWorkflow}
-                title="停止（可续跑：断点保留，之后可点「继续」接着跑）"
+                onClick={handlePauseWorkflow}
+                title="暂停（可续跑：断点保留，之后可点「继续」接着跑）"
               >
-                停止
+                暂停
               </ToolChip>
             )}
             {flowStatus === 'paused' && (

@@ -16,7 +16,7 @@ Commands（Job 模型协议，运行状态链路重构 §7.2——每个命令�
                  rejects before any Job file is created).
   job_resume     Resume a suspended Job (six gates adjudicated by JobManager;
                  resume_state comes from runs/<job_id>.json, not from host).
-  job_stop       Stop a Job (idempotent; suspended persist happens on the
+  job_pause      Pause a Job (idempotent; suspended persist happens on the
                  Runtime on_state_change callback, not here).
   actor_failed   Host executor ultimately failed (B5) — engine adjudicates:
                  notify author + suspend at node (断点保留，续跑=换新执行体重演).
@@ -396,39 +396,39 @@ def main():
             send_response(req_id, True, {"resumed": True, "job_id": job_id,
                                          "femo_session_id": rec.femo_session_id,
                                          "warnings": warnings})
-        elif cmd == "job_stop":
+        elif cmd == "job_pause":
             job_id = args_obj.get("job_id")
             if not isinstance(job_id, int):
                 send_response(req_id, False, error="job_id is required")
                 return
-            out = jm.stop_job(job_id)
-            # 幂等：suspended/finished/failed 照样 {stopped:true, state:<现态>}，
+            out = jm.pause_job(job_id)
+            # 幂等：suspended/finished/failed 照样 {paused:true, state:<现态>}，
             # 不假成功也不报错（B5 死于结构）
             # 【强停兜底（2026-09-07 214 事故）】stop() 的取消令牌已按
             # call_soon_threadsafe 送达——健康循环（含空转 park）秒级收场；
             # worker join 超时仍不退出=循环线程被同步调用卡死（asyncio 取消
             # 无法注入，Python 杀不了线程）。此时唯一诚实的强停是进程级：
-            # 档案仍 running 就先落 suspended(user_stop)（checkpoint 每节点
+            # 档案仍 running 就先落 suspended(user_pause)（checkpoint 每节点
             # 都写盘，进程死不丢断点），回执带 forced:true，再让 bridge 进程
             # 退出（宿主下次命令自动重拉新 bridge）。回执必须先于退出发出
-            # （shutdown 命令同款时序）。join 上限 10s < 宿主 job_stop 发送
+            # （shutdown 命令同款时序）。join 上限 10s < 宿主 job_pause 发送
             # 超时 15s——慢收场不等价于失败，回执总能赶上。
-            if out.get("stopped") and out.get("state") == "running":
+            if out.get("paused") and out.get("state") == "running":
                 t = workers.get(job_id)
                 if t is not None:
                     t.join(timeout=10)
                     if t.is_alive():
                         st = jm.get_job_state(job_id)
                         if st.get("state") == "running":
-                            jm.suspend(job_id, "user_stop")
+                            jm.suspend(job_id, "user_pause")
                         send_response(req_id, True, {**out, "state": "suspended", "forced": True})
                         threading.Timer(0.2, os._exit, args=(1,)).start()
                         return
-                    # 【干净收场回执纠偏（2026-09-10 停止确认竞态）】out.state 是
+                    # 【干净收场回执纠偏（2026-09-10 暂停确认竞态）】out.state 是
                     # cancel 前快照（恒 running），而 join 期间 worker 已落终态、
-                    # flow_stopped 事件此刻早已广播——回执若仍说 running，前端会
+                    # flow_paused 事件此刻早已广播——回执若仍说 running，前端会
                     # 在确认之后才起"等 8 秒确认"计时器（永远等不到）→ 黄条误报。
-                    # 重读档案真实终态，并带 confirmed:true（本次停止确实停掉了
+                    # 重读档案真实终态，并带 confirmed:true（本次暂停确实停掉了
                     # 运行中的 Job，非幂等无操作），前端据此当场确认不再等。
                     out = {**out, "state": jm.get_job_state(job_id).get("state", out.get("state")),
                            "confirmed": True}

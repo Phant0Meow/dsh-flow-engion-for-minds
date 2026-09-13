@@ -36,7 +36,7 @@ import { ProjPanel, useModelList, sourceOptions } from './projectPanel';
 import { BubbleOverlay } from './bubbleOverlay';
 import { FemoPreview } from './femoPreview';
 import { DebugPanel } from './debugPanel';
-import { FaPlay, FaStop, FaForward, FaPalette, FaUserPlus, FaTerminal, FaFolderOpen, FaFloppyDisk, IconPanelLeftOutline, FaSquareOutline } from './faIcons';
+import { FaPlay, FaPause, FaForward, FaPalette, FaUserPlus, FaTerminal, FaFolderOpen, FaFloppyDisk, IconPanelLeftOutline, FaSquareOutline } from './faIcons';
 
 // ─────────────────────────────────────────────
 // 颜色 / 主题 token
@@ -193,7 +193,7 @@ function MobileTitleBar({
   onExpand,
   onToggleFemo,
   onRun,
-  onStop,
+  onPause,
   onResume,
   hasActiveRunningNodes,
   // 文件读写（2026-09-11 手机端补齐）：与桌面工具栏「导入 .femo / 导出 .femo」
@@ -248,7 +248,8 @@ function MobileTitleBar({
           （箭头暗示左右移动，与「窗口状态切换」的真实语义无关）；②FA 的
           fa-maximize 是四角括号各带一支对角箭头，看着像「移动窗口」，遂定案——
           左=宿主同款边栏图标 IconPanelLeftOutline，右=FA regular 描边方块
-          FaSquareOutline（solid 方块是隔壁「停止」键的图形，故取描边）。 */}
+          FaSquareOutline（solid 方块原是隔壁「停止」键的图形故取描边；该键
+          2026-09-12 已改名「暂停」换 ⏸ 双竖条，描边方块继续沿用）。 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         {onExpand ? (
           <button
@@ -391,16 +392,17 @@ function MobileTitleBar({
       </div>
 
       {/* 右侧：运行控制 + 文件读写 + FEMO 切换
-          （2026-09-11 用户点名调序：播放/停止/继续这组放最左，文件读写（导入/导出）
+          （2026-09-11 用户点名调序：播放/暂停/继续这组放最左，文件读写（导入/导出）
           在其右，FEMO 视图开关仍居最右——控制键与视图开关夹住文件读写。） */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         {/* 运行控制（2026-09-11 定型：**按钮恒定，只变展示**）——三枚芯片各自钉死
             一个动作/一套样式/一句 title，从生到死不变；运行阶段只决定渲染哪几枚：
               绿▶「运行」   = fresh start（onRun：reset 从头开演）——未开跑与挂起态都出现
-              红⏹「停止」   = stop（onStop）——只在跑的时候出现
-              琥珀⏩「继续」= resume（onResume：从断点续跑）——只在 stop 之后的挂起态出现
-            挂起态顺序=常驻的运行键在前、挂起专属的继续键在后。暂停按钮删除
-            （引擎无暂停语义——stop=suspended 可续跑）。同款 FA 图标芯片底
+              红⏸「暂停」   = pause（onPause）——只在跑的时候出现（2026-09-12
+              用户点名 stop→pause 全链路改名：原「停止」键，语义即挂起可续跑）
+              琥珀⏩「继续」= resume（onResume：从断点续跑）——只在暂停之后的挂起态出现
+            挂起态顺序=常驻的运行键在前、挂起专属的继续键在后。（引擎无独立
+            硬暂停语义——pause=suspended 可续跑）。同款 FA 图标芯片底
             （色 13% 底 + 38% 边），只靠语义色区分。 */}
         {(flowStatus === 'idle' || flowStatus === 'paused') && (
           <MobileIconBtn
@@ -412,10 +414,10 @@ function MobileTitleBar({
         )}
         {flowStatus === 'running' && (
           <MobileIconBtn
-            onClick={onStop}
-            icon={FaStop}
+            onClick={onPause}
+            icon={FaPause}
             color={T.danger}
-            title="停止（可续跑）"
+            title="暂停（可续跑）"
           />
         )}
         {flowStatus === 'paused' && (
@@ -452,7 +454,7 @@ function MobileTitleBar({
         {/* FEMO 预览切换（2026-09-06 与运行控制键同族化）：同款 32×32 芯片
             造型（圆角/底+边公式/按压反馈全同），但走「视图开关」自己的颜色
             ——开=主题强调色（浅底+细边+微光晕），关=中性灰。与运行键的
-            绿/红/琥珀（从头跑·运行 / 停 / 继续）既同族又一眼可辨；颜色全部走主题 CSS
+            绿/红/琥珀（从头跑·运行 / 暂停 / 继续）既同族又一眼可辨；颜色全部走主题 CSS
             var，深浅两主题自动换值保持和谐可辨。 */}
         <button
           onClick={onToggleFemo}
@@ -495,7 +497,7 @@ function MobileTitleBar({
   );
 }
 
-// 运行控制图标按钮（2026-09-06 统一重造）：三个状态键（跑/停/从头）同款
+// 运行控制图标按钮（2026-09-06 统一重造）：三个状态键（跑/暂停/从头）同款
 // 芯片造型——32×32 圆角方、色 13% 浅底 + 38% 细边、居中 FA 图标（继承按钮
 // 文字色）。此前 label 文本符号（▶⏹⟲）字号基线各异，且 color+'22' 拼在
 // CSS var 上是非法值、底/边从未渲染过——裸符号随手一摆就是「风格差太远」。
@@ -2088,7 +2090,7 @@ setDrag={setDrag}
  *   onNew={...}  onAdd={...}  ... (所有 LibPanel 的 props)
  *   // 运行
  *   flowStatus={flowStatus}  hasActiveRunningNodes={hasActiveRunningNodes}
- *   onRun={handleRunWorkflow（恒定 reset:从头）}  onStop={handleStopWorkflow}  onResume={handleResumeWorkflow}
+ *   onRun={handleRunWorkflow（恒定 reset:从头）}  onPause={handlePauseWorkflow}  onResume={handleResumeWorkflow}
  *   nodeStates={nodeStates}  actionStore={actionStore}  activeNodeIds={activeNodeIds}
  *   // 气泡
  *   bubbleOverlay={bubbleOverlay}  onBubbleClose={handleBubbleClose}  submitHumanInput={submitHumanInput}
@@ -2129,7 +2131,7 @@ drag, setDrag, conn, setConn, isPanning, setNodes,
   libSel,
   // Runtime
   flowStatus, hasActiveRunningNodes,
-  onRun, onStop, onResume,
+  onRun, onPause, onResume,
   nodeStates, actionStore, activeNodeIds, errorNodeIds,
   // Bubble
   bubbleOverlay, onBubbleClose, submitHumanInput, humanWaits,
@@ -2347,7 +2349,7 @@ const { dragReady } = useMobileCanvasGesture({
         onExpand={fixedMode ? undefined : onExpand}
         onToggleFemo={() => setFemoVisible((v) => !v)}
         onRun={onRun}
-        onStop={onStop}
+        onPause={onPause}
         onResume={onResume}
         hasActiveRunningNodes={hasActiveRunningNodes}
         onImport={onImport}

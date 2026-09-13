@@ -25,6 +25,7 @@ import { readSessionEvents } from './session-events'
 import { apiRetry } from './api-retry'
 import { broker, RETRY_STEER_TEXT, RETRY_TURN_TIMEOUT_MS } from './node-retry'
 import { isNativeMode } from './windowing-native'
+import { appendDebugLog } from './debug-log'
 
 // ── 演员子代理诊断日志 ─────────────────────────────────────────────────────
 /** 把"建演员子代理时钉了什么档位/来源"落盘（cache/logs/debug-effort-hook.log）。
@@ -95,11 +96,11 @@ export const BUFFERED_CHILD_EVENTS = new Set([
   'assistant/chunk', 'assistant/message', 'tool/call', 'tool/result', 'step/end',
 ])
 
-// ── 在飞子代理登记（2026-08-30 暂停/停止全场掐断）──────────────────────────
+// ── 在飞子代理登记（2026-08-30 暂停/暂停全场掐断）──────────────────────────
 // 旧世界 femoGen 自己发 API 请求，右上角暂停掐断自己的 fetch 即可；插件化后
 // AI 演员的请求由 host 侧 dsh 子代理发出，引擎 runner.stop() 只取消引擎侧
 // 协程，在飞子代理毫无感知、继续流式输出（上帝窗直播照走）。这里登记全部
-// 在飞子代理的 AbortController，停止/暂停/出错时由 engine-events 统一掐断
+// 在飞子代理的 AbortController，暂停/暂停/出错时由 engine-events 统一掐断
 // （与空闲看门狗共用同一条 abort 通路：子代理终止 → 既有 finally 收尾——
 // flush 镜像缓冲 + 合成 turn/end + femo_stream end 清直播桶 + 归档）。
 // 【2026-09-09】interrupt 可选通路：0.1.3 原生复用子代理（subagent-native.ts）
@@ -109,7 +110,7 @@ export const BUFFERED_CHILD_EVENTS = new Set([
 export interface ActiveSubagent {
   controller: AbortController
   node: string
-  /** 所属 Job（清场域化维度：flow_stopped/flow_error 只掐本 Job 的演员）。 */
+  /** 所属 Job（清场域化维度：flow_paused/flow_error 只掐本 Job 的演员）。 */
   jobId: number
   /** 官方中断通路（原生复用子代理专用；缺省=one-shot 旧行为）。 */
   interrupt?: () => void
@@ -121,16 +122,16 @@ export const activeSubagents = new Set<ActiveSubagent>()
  * 经过 finally，登记必清）。 */
 export const activeChildRuns = new Map<string, { mainSid: string; node: string; jobId: number }>()
 
-/** 被 run-control（停止/暂停/出错/开跑清理）掐断的 controller：区别于空闲
- * 超时，这类中断不向引擎回传（引擎已在停止流程中，ai 等待协程已被取消，
+/** 被 run-control（暂停/暂停/出错/开跑清理）掐断的 controller：区别于空闲
+ * 超时，这类中断不向引擎回传（引擎已在暂停流程中，ai 等待协程已被取消，
  * 空 output 回传无意义且有唤醒未退净等待协程的竞态），也不写面板错误表
  * （暂停不是错误）。导出供 subagent-native.ts 判定同一语义。 */
 export const runControlAborted = new WeakSet<AbortController>()
 
 /** Job 域中断（Job 模型 §9.1 清场域化）：只掐指定 Job 的在飞 AI 演员子代理。
- * 调用点=flow_stopped/flow_error（引擎事件自带 job_id）。域化的互审实锤：
+ * 调用点=flow_paused/flow_error（引擎事件自带 job_id）。域化的互审实锤：
  * 全场 abort 会让 A 会话 stop 误杀 B 会话在飞演员 → B 的 subagent catch 走
- * 空回传 → B 引擎拿空 output 继续演——A 的停止污染 B 的戏。返回本次实际
+ * 空回传 → B 引擎拿空 output 继续演——A 的暂停污染 B 的戏。返回本次实际
  * 掐断数量（仅日志用）。 */
 export function abortJobSubagents(jobId: number, reason: string): number {
   let aborted = 0
@@ -443,8 +444,8 @@ export async function runAiSubagent(
   // tool calls, streamed text) is alive however long it runs, so the abort
   // timer is an idle watchdog that rearms on every child-session event.
   const controller = new AbortController()
-  // 登记在飞子代理（停止/暂停/出错时全场掐断用；finally 注销）。登记点在
-  // 本函数首个 await 之前——ai_request 事件处理体的同步段内完成，flow_stopped
+  // 登记在飞子代理（暂停/暂停/出错时全场掐断用；finally 注销）。登记点在
+  // 本函数首个 await 之前——ai_request 事件处理体的同步段内完成，flow_paused
   // 等后续事件必然晚于登记到达，不存在「掐断时还没登记」的窗口。
   const activeEntry: ActiveSubagent = { controller, node: String(request.node_name ?? ''), jobId }
   activeSubagents.add(activeEntry)
@@ -1030,8 +1031,8 @@ export async function runAiSubagent(
       // 兜底：事件流没采到时把最终回复当单行，防该 turn 空 react（半行）
       steps = [{ step: 0, cot: '', reply: output, tool_calls: [], tool_results: [] }]
     }
-    // 被 run-control 掐断（停止/暂停/出错/开跑清理）：不写面板错误表、
-    // 不向引擎回传（引擎已在停止流程中，ai 等待协程已被取消）。
+    // 被 run-control 掐断（暂停/暂停/出错/开跑清理）：不写面板错误表、
+    // 不向引擎回传（引擎已在暂停流程中，ai 等待协程已被取消）。
     const runControlAbort = runControlAborted.has(controller)
     if (!runControlAbort && result.stopReason !== 'completed' && result.stopReason !== 'max-tokens') {
       recordError(session.id, `子 agent 结束异常：${result.stopReason}`)
@@ -1065,7 +1066,7 @@ export async function runAiSubagent(
     // 首次交卷≠节点审结：引擎校验失败会发 node_retry（宿主 steer 让执行者
     // 续跑），此刻子代理必须还活着。停靠等审结：retry → 经租约 steer → 等
     // 新回合 → 取新片段组装回传；done（node_settled ok/gave_up）→ 收尾；
-    // aborted（停止/出错/bridge 死亡/15min 超时）→ 落入既有 finally。
+    // aborted（暂停/出错/bridge 死亡/15min 超时）→ 落入既有 finally。
     if (!runControlAbort) {
       // 停靠=合法静默：先解除空闲看门狗（停靠期无子会话事件，不解除会被
       // 误判空闲掐断）；重试轮 armIdle() 恢复武装。
@@ -1121,7 +1122,7 @@ export async function runAiSubagent(
       }
       if (verdict.kind === 'aborted' && !runControlAborted.has(controller)) {
         // 停靠超时（15min）/清场后引擎仍在等本回合回传（3600s 才超时）——
-        // 显式上报执行体失败（B5），引擎沉默收场；Job 停止场景投递会被
+        // 显式上报执行体失败（B5），引擎沉默收场；Job 暂停场景投递会被
         // 引擎活跃校验拒绝，无害。
         await sendActorFailure(bridge, jobId, waitKey, 'park_timeout',
           '停靠等待超时（15min），执行体未在时限内交出重试回合').catch(() => undefined)
@@ -1130,7 +1131,7 @@ export async function runAiSubagent(
   } catch (error: unknown) {
     // Idle timeout or interruption: tell the engine this node produced
     // nothing and let it continue, recording the failure in the panel.
-    // 【run-control 掐断例外】停止/暂停/出错的全场中断：引擎已在停止流程中
+    // 【run-control 掐断例外】暂停/暂停/出错的全场中断：引擎已在暂停流程中
     // （ai 等待协程已被取消），不回传、不记错误（暂停不是错误），仅留日志。
     const message = error instanceof Error ? error.message : String(error)
     if (runControlAborted.has(controller)) {

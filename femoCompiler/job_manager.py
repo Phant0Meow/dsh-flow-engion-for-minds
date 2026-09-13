@@ -19,8 +19,8 @@ db_utils.session_exists（六关第⑤关用，只读）。**不 import FEMO_run
 
 状态机（提案 §3.4）：
   （不存在）--job_start--> running --flow_done--> finished
-                                |--job_stop----> suspended(user_stop)
-                                |--取消路径-----> suspended(user_stop|cancelled)
+                                |--job_pause----> suspended(user_pause)
+                                |--取消路径-----> suspended(user_pause|cancelled)
                                 |--FEMORunPaused-> suspended(node_pause)
                                 |--节点异常-----> failed
   （启动时）running 且无执行体 --> suspended(crash)
@@ -49,8 +49,8 @@ STATE_SUSPENDED = 'suspended'
 STATE_FINISHED = 'finished'
 STATE_FAILED = 'failed'
 
-# suspended 的原因（crash 只来自对账；user_stop 来自 stop/取消；node_pause 来自直连 AI 失败挂起）
-REASON_USER_STOP = 'user_stop'
+# suspended 的原因（crash 只来自对账；user_pause 来自 pause/取消；node_pause 来自直连 AI 失败挂起）
+REASON_USER_PAUSE = 'user_pause'
 REASON_CRASH = 'crash'
 REASON_NODE_PAUSE = 'node_pause'
 
@@ -170,7 +170,7 @@ class JobRecord:
     各数各的（场次=书，Job=阅读）。"""
     job_id: int
     state: str = STATE_RUNNING
-    reason: str = ''                      # suspended 的原因：user_stop / crash / node_pause
+    reason: str = ''                      # suspended 的原因：user_pause / crash / node_pause
     waiting_human: bool = False           # running 的子标记（human_wait 置 / human_done 清 / 挂起清）
     script_fingerprint: str = ''
     script_name: str = ''                 # 诊断可读（list_jobs/日志里人能看懂）
@@ -249,7 +249,7 @@ class JobBusyError(JobError):
         super().__init__(
             'another_job_active',
             f'Job {active_job_id}（宿主标签 {active_host_ref or "?"}）活跃中，'
-            f'可先停止或等它挂起')
+            f'可先暂停或等它挂起')
 
 
 def _now_iso() -> str:
@@ -357,7 +357,7 @@ class JobManager:
     # 档案按"不在我内存里=主人死了"判 crash。判定依据是【本进程】的 _bound，
     # 而档案是磁盘上多进程共享资源——pytest/第二个宿主的 bridge 一启动，
     # 就会把活着进程的 Job 误杀成 crash（214 实锤：引擎僵死挂着 runner，
-    # 测试 bridge 启动对账把它写成 crash，之后每次停止都落进幂等空转）。
+    # 测试 bridge 启动对账把它写成 crash，之后每次暂停都落进幂等空转）。
     # 改为懒对账：只对【本宿主 session 路由会摸到的那个 job】、在【被摸到的
     # 时刻】裁决；_bound 主人检查永远先行（我是主人=它活着，哪怕循环僵死
     # 也轮不到对账判死）。
@@ -511,31 +511,31 @@ class JobManager:
         rec.reason = ''
         self._save(rec)
 
-    def stop_job(self, job_id: int) -> dict:
-        """停一个 Job。幂等。
-        - running 且 _bound 有挂靠 → runner.stop()（flow_stopped 照发、协程取消
+    def pause_job(self, job_id: int) -> dict:
+        """暂停一个 Job（=挂起，断点保留可续跑；2026-09-12 stop→pause 全链路改名，原名 stop_job）。幂等。
+        - running 且 _bound 有挂靠 → runner.stop()（flow_paused 照发、协程取消
           链启动）；**状态落盘不在这一步**——suspended 的落盘在 Runtime 取消
           路径的 on_state_change 回调（状态机变更单一来源=回调+finalize，
           防双写竞态）。
-        - running 但无挂靠（B5 死过的窗口）→ 直接落盘 suspended(reason=user_stop)
+        - running 但无挂靠（B5 死过的窗口）→ 直接落盘 suspended(reason=user_pause)
           （诚实化：没有执行体就是挂起，不是成功）。
-        - 非 running → {stopped:True, state:<现态>} 幂等返回。"""
+        - 非 running → {paused:True, state:<现态>} 幂等返回。"""
         with self._lock:
             rec = self._load(job_id)
             if rec is None:
-                raise JobError('no_such_job', f'Job {job_id} 不存在，无法停止')
+                raise JobError('no_such_job', f'Job {job_id} 不存在，无法暂停')
             if rec.state == STATE_RUNNING:
                 runner = self._bound.get(job_id)
                 if runner is not None:
                     runner.stop()
-                    return {'stopped': True, 'state': rec.state}
+                    return {'paused': True, 'state': rec.state}
                 # running 但无执行体：诚实化（B5 死于结构）
                 rec.state = STATE_SUSPENDED
-                rec.reason = REASON_USER_STOP
+                rec.reason = REASON_USER_PAUSE
                 rec.waiting_human = False
                 self._save(rec)
-                return {'stopped': True, 'state': rec.state}
-            return {'stopped': True, 'state': rec.state}
+                return {'paused': True, 'state': rec.state}
+            return {'paused': True, 'state': rec.state}
 
     def deliver_human_input(self, job_id: int, wait_key: str, body) -> dict:
         """人类/AI 回传投递。活跃+_bound 校验（B6/孤儿信投递侧防线：不盲投信箱）。
@@ -655,7 +655,7 @@ class JobManager:
         """bridge per-job 事件包装的旁挂入口：
         checkpoint → merge_checkpoint；flow_done → finalize(finished)；
         human_wait/human_done → mark_waiting(True/False)；其余忽略
-        （flow_stopped 不在此落盘——suspended 单一来源=on_state_change 回调）。"""
+        （flow_paused 不在此落盘——suspended 单一来源=on_state_change 回调）。"""
         if event_type == 'checkpoint':
             self.merge_checkpoint(job_id, data if isinstance(data, dict) else {})
         elif event_type == 'flow_done':

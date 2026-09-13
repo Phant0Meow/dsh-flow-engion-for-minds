@@ -142,7 +142,7 @@ export async function startJobOnSession(
   // 仅当引擎无活跃 Job（activeJobId undefined）才执行——有活跃 Job 的调用方
   // 本身在越轨开跑（引擎 another_job_active 会拒），此时绝不能误杀在跑剧本的
   // 合法演员；空闲槽上的在飞子代理必然是残留物（bridge 死亡等异常漏网，
-  // flow_stopped/flow_error 收口覆盖不到的），全场掐断防其污染新场次的窗口
+  // flow_paused/flow_error 收口覆盖不到的），全场掐断防其污染新场次的窗口
   // 直播（「演员串台」）。
   if (runState.activeJobId === undefined) {
     const killed = abortAllSubagents('新剧本开跑：清理上一场残留子代理')
@@ -242,7 +242,7 @@ export async function startJobOnSession(
         broadcastSse('compile_warnings', { sid, job_id: targetJobId, warnings: resumeWarnings })
       }
       // mark_running 已由引擎完成；宿主收口：currentJobId 指向本 Job（续旧
-      // Job 时会把它提为当前——femoGen 的停止/继续按钮跟随）、jobIds 幂等登记
+      // Job 时会把它提为当前——femoGen 的暂停/继续按钮跟随）、jobIds 幂等登记
       // （fresh 时已记则不动）+ prearm。
       await setSessionCurrentJob(resolved.femoRoot, sid, targetJobId)
       await appendSessionJob(resolved.femoRoot, sid, targetJobId)
@@ -271,7 +271,7 @@ export async function startJobOnSession(
 
 /** 运行守卫（GUARD 同款判定，§8.3：handleRunOnSession 与 handleCreateSession
  * 共用）：引擎有活跃 Job 即拒，409/错误文案带活跃 Job 归属（信息化——跨会话
- * 语义：可先停止或等它挂起）。他 session 活跃由引擎 another_job_active 二次
+ * 语义：可先暂停或等它挂起）。他 session 活跃由引擎 another_job_active 二次
  * 拒绝兜底（原话上浮）。 */
 export function assertRunAllowed(runState: RunState, sessionId: string): void {
   const activeId = runState.activeJobId
@@ -279,7 +279,7 @@ export function assertRunAllowed(runState: RunState, sessionId: string): void {
   const mirror = runState.jobs.get(activeId)
   const owner = mirror?.ownerSid ?? '?'
   const where = owner === sessionId ? '本会话' : `另一会话（${owner}）`
-  throw new Error(`${where}的 Job ${activeId} 活跃中，可先停止或等它挂起`)
+  throw new Error(`${where}的 Job ${activeId} 活跃中，可先暂停或等它挂起`)
 }
 
 // ── 剧本文件读写 handler ──────────────────────────────────────────────────
@@ -512,7 +512,7 @@ export async function handleRunOnSession(
     return
   }
   // GUARD（§8.2 镜像读）：引擎有活跃 Job 即 409，文案带活跃 Job 归属
-  // （信息化——跨会话语义：可先停止或等它挂起）。
+  // （信息化——跨会话语义：可先暂停或等它挂起）。
   try {
     assertRunAllowed(runState, String(sessionId))
   } catch (error: unknown) {

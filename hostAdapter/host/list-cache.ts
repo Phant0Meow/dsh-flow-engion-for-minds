@@ -22,13 +22,22 @@
  *    与文件路径绑定不会错，最坏是某行元数据略旧，下次集合变化或重启即愈；
  *  - 并发调用 single-flight（共享一次扫描/重建）；每次返回浅拷贝，防调用方改写；
  *  - 插件卸载/HMR 重载：disposer 恢复裸方法（模块级 WeakMap 登记裸版防双包）。
+ *
+ * 2026-09-08 事故复盘（0.1.3-alpha.2 实验实例上「列表只剩 live 会话」）：
+ * 0.1.3 起官方消费方把 signal 装进选项对象调用 persistence.list({ signal })，
+ * 而本缓存的包装层按老约定把首参当裸 AbortSignal 用——`signal?.throwIfAborted()`
+ * 对普通对象会直接 TypeError，list RPC 全体失败，前端只剩 live 会话。
+ * 修复：包装层显式兼容两种传法（裸 signal / { signal } 选项对象），转发原生时
+ * 统一归一化为 0.1.5 的 list(options) 形态。
  */
 import type { Context } from '@deepseek-ai/cordis'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
 type Header = Record<string, unknown>
-type ListFn = (signal?: AbortSignal) => Promise<Header[]>
+/** 官方消费方两种传法并存：裸 AbortSignal（旧）与 { signal } 选项对象（0.1.3+）。 */
+type ListOptions = { signal?: AbortSignal }
+type ListFn = (options?: AbortSignal | ListOptions) => Promise<Header[]>
 
 /** 模块级裸方法登记：HMR 重载时新 fiber install 前先恢复裸版，绝不叠加包装。 */
 const bareList = new WeakMap<object, ListFn>()
@@ -108,7 +117,12 @@ export function installPersistenceListCache(ctx: Context): () => void {
       return parts.join('\n')
     }
 
-    const wrapped = async (signal?: AbortSignal): Promise<Header[]> => {
+    /** 归一化两种调用约定：裸 AbortSignal（旧）→ 取本身；{ signal } 对象 → 取字段。 */
+    const normalizeSignal = (opts: AbortSignal | ListOptions | undefined): AbortSignal | undefined =>
+      opts instanceof AbortSignal ? opts : opts?.signal
+
+    const wrapped = async (opts?: AbortSignal | ListOptions): Promise<Header[]> => {
+      const signal = normalizeSignal(opts)
       signal?.throwIfAborted()
       if (inflight !== undefined) {
         const shared = await inflight
@@ -118,13 +132,13 @@ export function installPersistenceListCache(ctx: Context): () => void {
       inflight = (async () => {
         const fingerprint = await scanFingerprint()
         if (fingerprint === 'fallback') {
-          const fresh = await orig(signal)
+          const fresh = await orig(signal === undefined ? undefined : { signal })
           state.headers = fresh.slice()
           state.fingerprint = '' // 陌生布局不建指纹：布局恢复正常前每次都走原生
           return state.headers
         }
         if (state.headers === undefined || fingerprint !== state.fingerprint) {
-          const fresh = await orig(signal)
+          const fresh = await orig(signal === undefined ? undefined : { signal })
           state.headers = fresh.slice()
           state.fingerprint = fingerprint
           console.log(`[dsh-femo] list-cache: rebuilt via native scan (sessions=${fresh.length})`)

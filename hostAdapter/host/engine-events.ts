@@ -346,7 +346,7 @@ export function registerEngineEventHandlers(ctx: Context, deps: EngineEventsDeps
     // 【2026-09-10】主会话回合收口 → 熄灭导演状态行（整 turn 常亮：上面那条
     // assistant/message 只清块不熄状态，多步 react 的工具执行期状态行不闪）。
     if (event.type === 'turn/end') {
-      directorLive.get(sid0)?.endTurn()
+      directorLive.get(sid0)?.frames.endTurn()
       return
     }
     if (event.type === 'tool/call') {
@@ -414,7 +414,7 @@ export function registerEngineEventHandlers(ctx: Context, deps: EngineEventsDeps
       projTrace('frame', `建立导演直播位 turn=${turn === undefined ? '无' : String(turn).slice(-4)} sid=${sid0.slice(-8)}`)
     }
     projTrace('frame', `导演流收帧 type=${frame.type ?? '-'}（sid=${sid0.slice(-8)}，turn=${turn === undefined ? '无' : String(turn).slice(-4)}）`)
-    live.frame(frame)
+    live.frames.frame(frame)
   })
   installMainActorStreamBridge(ctx)
 
@@ -766,28 +766,29 @@ export function registerEngineEventHandlers(ctx: Context, deps: EngineEventsDeps
         steerMainAgent(ctx, sessionId, `[dsh-femo] 剧本运行结果：❌ 运行出错。错误信息：${String(d.error ?? 'unknown error')}——可修复剧本后再 fresh_start。${errorSuffix}${errorWarnSuffix}`)
         break
       }
-      case 'flow_stopped': {
+      case 'flow_paused': {
         // 【Job 域清场】同 flow_error（§6.2.9）。
-        const abortedOnStop = abortJobSubagents(jobId, '剧本停止：中断在飞 AI 演员')
-        if (abortedOnStop > 0) console.log(`[dsh-femo] flow_stopped: aborted ${abortedOnStop} in-flight subagent(s) of job ${jobId}`)
-        abandonMainAnswer(String(sessionId), '剧本停止，在飞注入作废', projections)
+        const abortedOnPause = abortJobSubagents(jobId, '剧本暂停：中断在飞 AI 演员')
+        if (abortedOnPause > 0) console.log(`[dsh-femo] flow_paused: aborted ${abortedOnPause} in-flight subagent(s) of job ${jobId}`)
+        abandonMainAnswer(String(sessionId), '剧本暂停，在飞注入作废', projections)
         // 本 Job 停靠者立即放行。
-        broker?.abortJob(jobId, 'flow stopped')
+        broker?.abortJob(jobId, 'flow paused')
         // 挂起（可续跑）：断点保留在引擎 runs 档案；pausedByUser 判定删除——
-        // pause 语义退役，停止=挂起（可续跑），文案恒定。
+        // 暂停=挂起（可续跑），文案恒定（2026-09-12 stop→pause 全链路改名：
+        // 事件名 flow_stopped→flow_paused，命名自此与挂起语义对齐）。
         jobMirrorSetState(runState, jobId, 'suspended')
         mirror.waitingHuman = undefined
-        pushDiag('flow_stopped', `suspended + waitingHuman CLEARED job=${jobId}`)
+        pushDiag('flow_paused', `suspended + waitingHuman CLEARED job=${jobId}`)
         broadcastProjectionState(runState, String(sessionId))
         if (runState.activeJobId === jobId) runState.activeJobId = undefined
         // 全窗广播：工具与前端按钮触发的停止都由此统一通知所有窗口
         // （femo-run 工具侧已不再重复写）。
-        broadcastCompat(ctx, session, projections, '⏹ 剧本已停止（可续跑）')
+        broadcastCompat(ctx, session, projections, '⏸ 剧本已暂停（可续跑）')
         // 通知主模型（对话流直达，必达）：前端按钮停止时没有工具回执，
         // steer 是主模型知情的唯一通道（2026-09-06 猫猫实测：手动停止后主模型
         // 零通知）。时序在 suspended 落定+activeJobId 清空之后，isSessionRunning
         // 已为 false，不被 pre-step 门卫吞——与 flow_done/flow_error 同时序。
-        steerMainAgent(ctx, sessionId, '[dsh-femo] 剧本运行结果：⏹ 已停止（挂起，断点保留）。可用 resume 续跑或 fresh_start 重跑。')
+        steerMainAgent(ctx, sessionId, '[dsh-femo] 剧本运行结果：⏸ 已暂停（挂起，断点保留）。可用 resume 续跑或 fresh_start 重跑。')
         break
       }
       case 'bridge_run_ended': {
@@ -807,10 +808,10 @@ export function registerEngineEventHandlers(ctx: Context, deps: EngineEventsDeps
         // 均已收工，不会再冒出 settled 通知开的空 turn 把通知吃掉（Job 761 实证）。
         //
         // 判定必须用 mirror.state === 'finished'（flow_done 真的来过），
-        // **不可只看 d.ok**：停止/取消路径 run() 也正常返回、ok 同样是 true
-        // （femo_bridge.py:261；Job 762/763 按停实测 bridge_run_ended ok=true），
-        // 无条件发会把"按停"误报成"✅ 跑完"（复刻 1020 局僵尸通知）。
-        // 失败/停止路径的通知各由 flow_error / flow_stopped 承担，此处不重复发。
+        // **不可只看 d.ok**：暂停/取消路径 run() 也正常返回、ok 同样是 true
+        // （femo_bridge.py:261；Job 762/763 按暂停实测 bridge_run_ended ok=true），
+        // 无条件发会把"按暂停"误报成"✅ 跑完"（复刻 1020 局僵尸通知）。
+        // 失败/暂停路径的通知各由 flow_error / flow_paused 承担，此处不重复发。
         if (mirror.state === 'finished') {
           // giveups 汇总（v4 §8.3 门卫坑）：随 Job 走的 giveups 在此 flush→steer。
           // 标题中性——条目混有"报错后重试成功"（agent_error）与"超限跳过"

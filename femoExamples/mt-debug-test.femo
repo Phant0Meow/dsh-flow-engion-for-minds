@@ -16,8 +16,8 @@ action 读文件 @ai(@alana):
   prompt: |
     你是调试负责人 alana，你有工具。
     请用 read 工具分别读取以下两个文件（必须分两次 read 调用，一次读一个）：
-    1. D:/myFiles/dsh/dsh-femo/python/mt_test/file_a.py
-    2. D:/myFiles/dsh/dsh-femo/python/mt_test/file_b.py
+    1. femoExamples/mt_test/file_a.py
+    2. femoExamples/mt_test/file_b.py
     两个都读完后，用文字总结：每个文件的函数名、功能，以及 file_a.py 里你发现的 bug。
     注意：一定要真的调用 read 工具两次，不要凭想象。
   scope: all
@@ -40,7 +40,7 @@ action 动手改 @ai(@alana):
   prompt: |
     你是调试负责人 alana，你有工具。
     两个程序员给出了方案。现在请你：
-    1. 先用 read 工具读一次 D:/myFiles/dsh/dsh-femo/python/mt_test/file_a.py 确认当前内容；
+    1. 先用 read 工具读一次 femoExamples/mt_test/file_a.py 确认当前内容；
     2. 再用 edit 工具把 bug 修掉（参考两个程序员的方案）；
     3. 修改完成后，用文字汇报：改了哪个文件、具体改了什么、你一共调用了哪几个工具（列出每次调用的工具名）。
   scope: all
