@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'MyCustomFont';
+  src: url('/character_need.ttf') format('truetype');
+  font-display: swap;
+}
+
+/* 全局应用，让浏览器自动回退 */
+body {
+  font-family: var(--femo-font-body);
+}

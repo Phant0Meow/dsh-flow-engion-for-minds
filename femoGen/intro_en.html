@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Femo — Orchestrate Multi-Agent Worlds Like Writing a Screenplay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a08;
+    --paper: #f5f0e8;
+    --gold: #c8a84b;
+    --gold-dim: #8a6e2a;
+    --red-act: #c0392b;
+    --cream: #ede8d8;
+    --mist: #1a1a14;
+    --line: rgba(200,168,75,0.2);
+    --text-bright: #f0ead6;
+    --text-mid: #a89a78;
+    --text-dim: #5a5040;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Playfair Display', Georgia, serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--ink);
+    color: var(--text-bright);
+    font-family: var(--serif);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── Custom Cursor ── */
+  #cursor {
+    position: fixed; top: 0; left: 0; width: 8px; height: 8px;
+    background: var(--gold); border-radius: 50%;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%,-50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s, opacity 0.2s;
+    mix-blend-mode: difference;
+  }
+  #cursor-ring {
+    position: fixed; top: 0; left: 0; width: 36px; height: 36px;
+    border: 1px solid rgba(200,168,75,0.4); border-radius: 50%;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%,-50%);
+    transition: transform 0.12s cubic-bezier(0.23,1,0.32,1),
+                width 0.3s, height 0.3s;
+  }
+
+  /* ── Film-grain overlay ── */
+  #grain {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+
+  /* ── Navigation ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 1.2rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(20px);
+    background: rgba(10,10,8,0.7);
+    animation: fadeDown 0.8s ease forwards;
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .nav-logo {
+    font-family: var(--mono); font-size: 0.9rem; letter-spacing: 0.2em;
+    color: var(--gold); text-transform: uppercase;
+  }
+  .nav-links {
+    display: flex; gap: 2.5rem; list-style: none;
+    font-family: var(--mono); font-size: 0.72rem;
+    letter-spacing: 0.12em; color: var(--text-mid);
+  }
+  .nav-links a { color: inherit; text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--gold); }
+  .nav-cta {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.1em;
+    border: 1px solid var(--gold-dim); color: var(--gold);
+    padding: 0.5rem 1.2rem; background: transparent;
+    cursor: none; transition: background 0.2s, color 0.2s;
+    text-decoration: none;
+  }
+  .nav-cta:hover { background: var(--gold); color: var(--ink); }
+
+  /* ── Section base ── */
+  section { position: relative; }
+
+  /* ── Hero ── */
+  #hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8rem 2rem 4rem;
+    overflow: hidden;
+  }
+
+  .hero-bg-lines {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 59px,
+        rgba(200,168,75,0.05) 59px,
+        rgba(200,168,75,0.05) 60px
+      );
+  }
+
+  .hero-tagline {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.35em;
+    color: var(--gold); text-transform: uppercase;
+    margin-bottom: 2.5rem;
+    opacity: 0; animation: fadeUp 0.8s 0.3s ease forwards;
+  }
+
+  .hero-title {
+    font-family: var(--serif); font-size: clamp(2.8rem, 7.5vw, 6.5rem);
+    font-weight: 900; line-height: 1.05;
+    text-align: center; max-width: 960px;
+    color: var(--text-bright);
+    opacity: 0; animation: fadeUp 0.9s 0.5s ease forwards;
+    letter-spacing: -0.01em;
+  }
+  .hero-title em {
+    font-style: italic; color: var(--gold);
+  }
+
+  .hero-sub {
+    margin-top: 2rem; font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+    text-align: center; max-width: 580px;
+    color: var(--text-mid); line-height: 1.95;
+    font-family: var(--serif); font-weight: 400;
+    opacity: 0; animation: fadeUp 0.9s 0.7s ease forwards;
+  }
+
+  .hero-actions {
+    margin-top: 3rem; display: flex; gap: 1.2rem;
+    opacity: 0; animation: fadeUp 0.9s 0.9s ease forwards;
+  }
+  .btn-primary {
+    font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em;
+    background: var(--gold); color: var(--ink);
+    padding: 0.85rem 2.2rem; border: none; cursor: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,168,75,0.25); }
+  .btn-secondary {
+    font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em;
+    background: transparent; color: var(--text-mid);
+    padding: 0.85rem 2.2rem; border: 1px solid var(--text-dim); cursor: none;
+    transition: color 0.2s, border-color 0.2s;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-secondary:hover { color: var(--text-bright); border-color: var(--text-mid); }
+
+  .scroll-hint {
+    position: absolute; bottom: 2.5rem;
+    font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.2em;
+    color: var(--text-dim); text-transform: uppercase;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    opacity: 0; animation: fadeUp 1s 1.3s ease forwards;
+  }
+  .scroll-line {
+    width: 1px; height: 40px; background: linear-gradient(to bottom, var(--gold), transparent);
+    animation: scrollPulse 2s ease infinite;
+  }
+  @keyframes scrollPulse {
+    0%,100% { opacity: 0.3; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(1.1); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Act Divider ── */
+  .act-divider {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.5rem; padding: 4rem 0 2rem;
+    font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.3em;
+    color: var(--gold-dim); text-transform: uppercase;
+  }
+  .act-divider::before, .act-divider::after {
+    content: ''; flex: 1; max-width: 120px;
+    height: 1px; background: linear-gradient(to right, transparent, var(--gold-dim));
+  }
+  .act-divider::after { background: linear-gradient(to left, transparent, var(--gold-dim)); }
+
+  /* ── Pain Points ── */
+  #problem {
+    padding: 4rem 2rem 6rem; max-width: 1200px; margin: 0 auto;
+  }
+  .compare-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border: 1px solid var(--line); margin-top: 3rem;
+  }
+  .compare-col { padding: 3rem; }
+  .compare-col:first-child {
+    border-right: 1px solid var(--line);
+    background: rgba(192,57,43,0.04);
+  }
+  .compare-col:last-child { background: rgba(200,168,75,0.04); }
+  .compare-label {
+    font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.3em;
+    text-transform: uppercase; margin-bottom: 2rem;
+  }
+  .compare-col:first-child .compare-label { color: #c0392b; }
+  .compare-col:last-child .compare-label { color: var(--gold); }
+  .compare-item {
+    display: flex; gap: 1rem; margin-bottom: 2rem; align-items: flex-start;
+  }
+  .compare-num {
+    font-family: var(--mono); font-size: 1.8rem; font-weight: 300; line-height: 1;
+    color: var(--text-dim); flex-shrink: 0; padding-top: 0.1rem;
+  }
+  .compare-col:last-child .compare-num { color: var(--gold-dim); }
+  .compare-item p { font-size: 0.9rem; color: var(--text-mid); line-height: 1.85; }
+  .compare-item strong { color: var(--text-bright); font-weight: 600; }
+
+  /* ── Features ── */
+  #features {
+    padding: 2rem 2rem 6rem; max-width: 1200px; margin: 0 auto;
+  }
+  .section-eyebrow {
+    font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.3em;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 1rem;
+  }
+  .section-title {
+    font-family: var(--serif); font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 700; line-height: 1.2; color: var(--text-bright);
+    max-width: 680px;
+  }
+  .section-title em { font-style: italic; color: var(--gold); }
+
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--line);
+    border: 1px solid var(--line); margin-top: 4rem;
+  }
+  .feature-card {
+    background: var(--ink); padding: 2.5rem 2rem;
+    transition: background 0.25s;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: var(--gold); transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  .feature-card:hover { background: rgba(200,168,75,0.04); }
+  .feature-card:hover::before { transform: scaleX(1); }
+  .feature-icon {
+    font-family: var(--mono); font-size: 1.5rem; color: var(--gold);
+    margin-bottom: 1.2rem; display: block;
+  }
+  .feature-name {
+    font-family: var(--serif); font-size: 1.05rem; font-weight: 700;
+    color: var(--text-bright); margin-bottom: 0.7rem; line-height: 1.3;
+  }
+  .feature-desc { font-size: 0.85rem; color: var(--text-mid); line-height: 1.85; }
+  .feature-tag {
+    display: inline-block; margin-top: 1.2rem;
+    font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em;
+    color: var(--gold-dim); border: 1px solid var(--gold-dim); padding: 0.2rem 0.6rem;
+    text-transform: uppercase;
+  }
+
+  /* ── Code Showcase ── */
+  #code-demo {
+    padding: 2rem 2rem 6rem; max-width: 1200px; margin: 0 auto;
+  }
+  .code-layout {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+    align-items: start; margin-top: 4rem;
+  }
+  .code-left { }
+  .code-explanation { margin-top: 2.5rem; }
+  .code-point {
+    display: flex; gap: 1rem; margin-bottom: 1.8rem; align-items: flex-start;
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .code-point.visible { opacity: 1; transform: translateX(0); }
+  .code-bullet {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold); flex-shrink: 0; margin-top: 0.5rem;
+  }
+  .code-point p { font-size: 0.88rem; color: var(--text-mid); line-height: 1.9; }
+  .code-point strong { color: var(--text-bright); }
+
+  .code-right { position: sticky; top: 6rem; }
+  .code-window {
+    background: #0e0e0c;
+    border: 1px solid rgba(200,168,75,0.15);
+    overflow: hidden;
+  }
+  .code-titlebar {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1rem; border-bottom: 1px solid rgba(200,168,75,0.1);
+    background: rgba(200,168,75,0.04);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #c0392b; }
+  .dot-y { background: #c8a84b; }
+  .dot-g { background: #27ae60; }
+  .code-filename {
+    margin-left: 0.8rem; font-family: var(--mono); font-size: 0.68rem;
+    color: var(--text-dim); letter-spacing: 0.05em;
+  }
+  pre {
+    padding: 1.5rem; overflow-x: auto;
+    font-family: var(--mono); font-size: 0.75rem; line-height: 1.8;
+    color: var(--text-mid);
+  }
+  .tok-keyword { color: #e88e5a; }
+  .tok-string  { color: #98c379; }
+  .tok-comment { color: #4a4a3a; font-style: italic; }
+  .tok-at      { color: #c8a84b; }
+  .tok-var     { color: #9cdcfe; }
+  .tok-flow    { color: #c586c0; }
+  .tok-arrow   { color: var(--text-dim); }
+  .tok-bracket { color: #4ec9b0; }
+
+  /* ── Demo Cases ── */
+  #cases {
+    padding: 2rem 2rem 6rem; max-width: 1200px; margin: 0 auto;
+  }
+  .cases-list { margin-top: 4rem; }
+  .case-item {
+    display: grid; grid-template-columns: 80px 1fr auto;
+    gap: 2rem; align-items: start;
+    padding: 2.5rem 0; border-bottom: 1px solid var(--line);
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .case-item.visible { opacity: 1; transform: translateY(0); }
+  .case-num {
+    font-family: var(--serif); font-size: 3.5rem; font-weight: 900;
+    color: var(--text-dim); line-height: 1; padding-top: 0.2rem;
+    font-style: italic;
+  }
+  .case-title {
+    font-family: var(--serif); font-size: 1.35rem; font-weight: 700;
+    color: var(--text-bright); margin-bottom: 0.7rem; line-height: 1.3;
+  }
+  .case-desc { font-size: 0.88rem; color: var(--text-mid); line-height: 1.95; max-width: 560px; }
+  .case-badge {
+    font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em;
+    padding: 0.4rem 1rem; border: 1px solid;
+    text-transform: uppercase; white-space: nowrap;
+    align-self: flex-start;
+  }
+  .badge-gold { color: var(--gold); border-color: var(--gold-dim); }
+  .badge-red  { color: #e07070; border-color: #8a3030; }
+
+  /* ── Philosophy ── */
+  #philosophy {
+    padding: 4rem 2rem 6rem; overflow: hidden;
+  }
+  .philosophy-inner { max-width: 1200px; margin: 0 auto; }
+  .philosophy-grid {
+    display: grid; grid-template-columns: repeat(5,1fr);
+    gap: 0; margin-top: 4rem;
+    border-top: 1px solid var(--line);
+  }
+  .philo-card {
+    padding: 3rem 1.8rem; border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .philo-card:last-child { border-right: none; }
+  .philo-num {
+    font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.3em;
+    color: var(--gold-dim); margin-bottom: 2rem;
+  }
+  .philo-title {
+    font-family: var(--serif); font-size: 1rem; font-weight: 700;
+    color: var(--text-bright); margin-bottom: 1rem; line-height: 1.4;
+  }
+  .philo-body { font-size: 0.8rem; color: var(--text-dim); line-height: 1.95; }
+
+  /* ── Table ── */
+  #matrix {
+    padding: 2rem 2rem 6rem; max-width: 1100px; margin: 0 auto;
+  }
+  .matrix-table {
+    width: 100%; border-collapse: collapse; margin-top: 3.5rem;
+    font-family: var(--mono); font-size: 0.78rem;
+  }
+  .matrix-table th {
+    padding: 1rem 1.5rem; text-align: left;
+    border-bottom: 2px solid var(--gold-dim);
+    color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 500;
+  }
+  .matrix-table td {
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--line);
+    color: var(--text-mid); vertical-align: middle;
+  }
+  .matrix-table tr:hover td { background: rgba(200,168,75,0.03); }
+  .matrix-table td:first-child { color: var(--text-bright); }
+  .check { color: var(--gold); font-size: 1rem; }
+
+  /* ── CTA ── */
+  #cta-section {
+    padding: 6rem 2rem 8rem; text-align: center;
+    border-top: 1px solid var(--line);
+    position: relative; overflow: hidden;
+  }
+  .cta-bg-text {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--serif); font-size: 18vw; font-weight: 900;
+    color: rgba(200,168,75,0.03); pointer-events: none;
+    white-space: nowrap; font-style: italic;
+    line-height: 1;
+  }
+  .cta-eyebrow {
+    font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.35em;
+    color: var(--gold-dim); text-transform: uppercase; margin-bottom: 1.5rem;
+  }
+  .cta-title {
+    font-family: var(--serif); font-size: clamp(2.5rem, 5vw, 5rem);
+    font-weight: 900; color: var(--text-bright); line-height: 1.15;
+    margin-bottom: 1.5rem;
+  }
+  .cta-title em { font-style: italic; color: var(--gold); }
+  .cta-sub {
+    font-size: 1rem; color: var(--text-mid); max-width: 480px;
+    margin: 0 auto 3rem; line-height: 1.9;
+  }
+  .cta-install {
+    display: inline-flex; align-items: center; gap: 1rem;
+    background: rgba(200,168,75,0.08); border: 1px solid var(--gold-dim);
+    padding: 1rem 2rem; margin-bottom: 2rem;
+    font-family: var(--mono); font-size: 0.8rem;
+    color: var(--text-bright); cursor: none;
+    transition: background 0.2s;
+  }
+  .cta-install:hover { background: rgba(200,168,75,0.14); }
+  .cta-install span { color: var(--gold); }
+  .cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+  .cta-link {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    color: var(--text-mid); text-decoration: none;
+    border-bottom: 1px solid var(--text-dim); padding-bottom: 0.1rem;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .cta-link:hover { color: var(--gold); border-color: var(--gold); }
+
+  /* ── Footer ── */
+  footer {
+    padding: 2rem 3rem; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .footer-logo { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.2em; }
+  .footer-note { font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); }
+
+  /* ── Reveal on scroll ── */
+  .reveal {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── Star decoration ── */
+  .star-count {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-family: var(--mono); font-size: 0.7rem; color: var(--gold-dim);
+    border: 1px solid var(--gold-dim); padding: 0.3rem 0.8rem; margin-top: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .compare-grid, .code-layout { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .philosophy-grid { grid-template-columns: 1fr; }
+    .case-item { grid-template-columns: 60px 1fr; }
+    .case-badge { display: none; }
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+  }
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .compare-grid { grid-template-columns: 1fr; }
+    .compare-col:first-child { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<div id="grain"></div>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-logo">Femo Studio</div>
+  <ul class="nav-links">
+    <li><a href="#problem">Problems</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#code-demo">Syntax</a></li>
+    <li><a href="#cases">Cases</a></li>
+    <li><a href="#philosophy">Philosophy</a></li>
+  </ul>
+  <a href="https://github.com/Phant0Meow/Femo" class="nav-cta">GitHub ↗</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg-lines"></div>
+  <div class="hero-tagline">Flow Engine for Minds · WA</div>
+  <h1 class="hero-title">
+    Orchestrate Multi-Agent Worlds<br>Like Writing a <em>Screenplay</em>
+  </h1>
+  <p class="hero-sub">
+    No more hunting through five files for two hours<br>every time you tweak a multi-agent workflow.<br>
+    Femo syntax reads like a script — perspective isolation in one line, parallel voting in one line.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="document.getElementById('code-demo').scrollIntoView({behavior:'smooth'})">View Syntax →</button>
+    <a href="https://femo.net" class="btn-secondary">Online Editor</a>
+  </div>
+  <div class="star-count">⭐ Apache 2.0 · Free & Open Source</div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    Scroll
+  </div>
+</section>
+
+<!-- ACT I: PROBLEM -->
+<div class="act-divider">Act I · The Pain You Know</div>
+
+<section id="problem">
+  <div class="reveal">
+    <div class="section-eyebrow">Before / After</div>
+    <h2 class="section-title">Changing a Workflow<br><em>Shouldn't</em> Be This Hard</h2>
+  </div>
+  <div class="compare-grid reveal" style="transition-delay:0.1s">
+    <div class="compare-col">
+      <div class="compare-label">The Old Way</div>
+      <div class="compare-item">
+        <div class="compare-num">01</div>
+        <p><strong>Tweak one agent workflow</strong> — hunt through five files, spend two hours, pray nothing breaks.</p>
+      </div>
+      <div class="compare-item">
+        <div class="compare-num">02</div>
+        <p><strong>Add a "pet" character</strong> — patch it in, manage context by hand, adding a dog later means a full refactor.</p>
+      </div>
+      <div class="compare-item">
+        <div class="compare-num">03</div>
+        <p><strong>Build an AI Werewolf game</strong> — perspective isolation, phase management, concurrency control — a thousand lines of glue code just to get it running.</p>
+      </div>
+      <div class="compare-item">
+        <div class="compare-num">04</div>
+        <p><strong>Validate a harness design</strong> — scaffold the whole thing first, debug it before you even see results. There goes the afternoon.</p>
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-label">Femo</div>
+      <div class="compare-item">
+        <div class="compare-num">01</div>
+        <p>Change a harness flow — <strong>edit a few lines of script, done in 2 minutes</strong>. The harness hot-reloads. The script <em>is</em> the flow.</p>
+      </div>
+      <div class="compare-item">
+        <div class="compare-num">02</div>
+        <p>Users have <strong>spawned an AI cat in 3 minutes</strong>, hanging out with an AI companion, with shared cross-script memory.</p>
+      </div>
+      <div class="compare-item">
+        <div class="compare-num">03</div>
+        <p>Full Werewolf game: <strong>zero-code frontend (generates ~250 lines of Femo) + 150 lines of Python</strong>. Perspective isolation: one line. Parallel voting: one line. Actually playable.</p>
+      </div>
+      <div class="compare-item">
+        <div class="compare-num">04</div>
+        <p><strong>15 minutes</strong> to prototype in Femo, run it immediately, validate your idea while it's still fresh.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACT II: FEATURES -->
+<div class="act-divider">Act II · What Femo Gives You</div>
+
+<section id="features">
+  <div class="reveal">
+    <div class="section-eyebrow">Core Features</div>
+    <h2 class="section-title">Multi-Agent Orchestration<br><em>This Simple</em></h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal" style="transition-delay:0.05s">
+      <span class="feature-icon">⌘</span>
+      <div class="feature-name">Zero-Code Visual Builder</div>
+      <p class="feature-desc">The femo.net online editor — drag nodes, build a multi-agent group workflow in three minutes, write zero code.</p>
+      <span class="feature-tag">Web Frontend</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.1s">
+      <span class="feature-icon">◈</span>
+      <div class="feature-name">Perspective Isolation</div>
+      <p class="feature-desc">One line: <code style="color:var(--gold);font-size:0.8em">scope: [@narrator] + wolves</code> — messages route precisely, agents never cross roles, private conversations built in.</p>
+      <span class="feature-tag">One Line</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.15s">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-name">Native Concurrency</div>
+      <p class="feature-desc"><code style="color:var(--gold);font-size:0.8em">par @player in allplayers:</code> — one line for parallel voting. Asyncio + thread pool + process pool. No blocking.</p>
+      <span class="feature-tag">par syntax</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.2s">
+      <span class="feature-icon">🧩</span>
+      <div class="feature-name">Native Human Node</div>
+      <p class="feature-desc">Human players join AI workflows natively. Human + AI + program hybrid systems, no special handling required.</p>
+      <span class="feature-tag">Human-in-Loop</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.25s">
+      <span class="feature-icon">🔌</span>
+      <div class="feature-name">Python Integration</div>
+      <p class="feature-desc">func nodes call Python natively — plug in complex logic, external modules, your own libraries. No platform lock-in.</p>
+      <span class="feature-tag">func node</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.3s">
+      <span class="feature-icon">🔗</span>
+      <div class="feature-name">Cross-Script Soul Memory</div>
+      <p class="feature-desc">Unique soul IDs, memory retrieval across sessions. A Stanford Town resident can remember friends made in a Werewolf game.</p>
+      <span class="feature-tag">World Automata</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.35s">
+      <span class="feature-icon">◎</span>
+      <div class="feature-name">Full Flow Control</div>
+      <p class="feature-desc">Sequential, branch, while, for, par parallel, join, if conditional — orchestrate complex flows like outlining a screenplay.</p>
+      <span class="feature-tag">Full Coverage</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.4s">
+      <span class="feature-icon">📦</span>
+      <div class="feature-name">Open Source, Embeddable</div>
+      <p class="feature-desc">Apache 2.0, commercial-friendly. Pure-Python compiler — drop it into your project and run any .femo script. Zero lock-in.</p>
+      <span class="feature-tag">Apache 2.0</span>
+    </div>
+    <div class="feature-card reveal" style="transition-delay:0.45s">
+      <span class="feature-icon">✦</span>
+      <div class="feature-name">Shareable Scripts</div>
+      <p class="feature-desc">Paste someone's .femo code and run their entire workflow instantly. Community scripts work like code snippets.</p>
+      <span class="feature-tag">Community</span>
+    </div>
+  </div>
+</section>
+
+<!-- ACT III: CODE -->
+<div class="act-divider">Act III · See the Actual Code</div>
+
+<section id="code-demo">
+  <div class="reveal">
+    <div class="section-eyebrow">Femo Syntax</div>
+    <h2 class="section-title">Syntax Like a <em>Script</em> —<br>Simple Enough to Skip the Docs</h2>
+  </div>
+
+  <div class="code-layout">
+    <div class="code-left">
+      <div class="code-explanation">
+        <div class="code-point">
+          <div class="code-bullet"></div>
+          <p>The <strong>actors block</strong> declares the cast — AI, human, or function, all referenced uniformly with <code style="color:var(--gold);font-size:0.85em">@</code>. The actor is Femo's original first-class type.</p>
+        </div>
+        <div class="code-point">
+          <div class="code-bullet"></div>
+          <p>The <strong>scope field</strong> controls message visibility in one line. <code style="color:var(--gold);font-size:0.85em">scope: [@Eve, @Cat, @Me]</code> means these three share a context — invisible to everyone else.</p>
+        </div>
+        <div class="code-point">
+          <div class="code-bullet"></div>
+          <p>The <strong>mainflow block</strong> describes the flow with Mermaid-style arrow syntax. <code style="color:var(--gold);font-size:0.85em">-> [input]</code> loops back to a node — a cycle in one line.</p>
+        </div>
+        <div class="code-point">
+          <div class="code-bullet"></div>
+          <p>The <strong>code block</strong> hooks in Python modules — memory, context, custom functions. Your project logic runs unchanged.</p>
+        </div>
+        <div class="code-point">
+          <div class="code-bullet"></div>
+          <p><strong>Prompts</strong> support f-strings, variables inline. No string concatenation hell. LLMs read context naturally and just chat.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-right reveal" style="transition-delay:0.2s">
+      <div class="code-window">
+        <div class="code-titlebar">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+          <span class="code-filename">a-little-soul-in-the-database.femo</span>
+        </div>
+        <pre><span class="tok-keyword">meta</span>:
+  id = <span class="tok-string">000LuxFiat</span>
+  name = <span class="tok-string">a-little-soul-in-the-database</span>
+  owner = <span class="tok-var">001</span>
+
+<span class="tok-keyword">actors</span>:
+  ai <span class="tok-at">@Eve</span> = soul:<span class="tok-var">the1stlittlesoul</span>
+  ai <span class="tok-at">@Cat</span> = soul:<span class="tok-var">littlecat</span>
+  human <span class="tok-at">@Me</span> = soul:<span class="tok-var">0</span>, source:<span class="tok-var">001</span>
+
+<span class="tok-keyword">code</span>:
+  sleep = file:<span class="tok-string">"wait.py"</span>
+
+<span class="tok-keyword">action</span> EveMove <span class="tok-at">@ai</span>(<span class="tok-at">@Eve</span>):
+  prompt: Eve, do whatever you like — keep it brief.
+  scope: [<span class="tok-at">@Eve</span>, <span class="tok-at">@Cat</span>, <span class="tok-at">@Me</span>]
+
+<span class="tok-keyword">action</span> CatMove <span class="tok-at">@ai</span>(<span class="tok-at">@Cat</span>):
+  prompt: You are a little cat. No human speech allowed~
+  scope: [<span class="tok-at">@Eve</span>, <span class="tok-at">@Cat</span>, <span class="tok-at">@Me</span>]
+
+<span class="tok-keyword">action</span> input <span class="tok-at">@human</span>(<span class="tok-at">@Me</span>):
+  prompt: Say something to Eve.
+  scope: [<span class="tok-at">@Eve</span>, <span class="tok-at">@Cat</span>, <span class="tok-at">@Me</span>]
+
+<span class="tok-keyword">action</span> wait10 <span class="tok-at">@func</span>(sleep.wait_10):
+
+<span class="tok-keyword">mainflow</span>:
+  <span class="tok-bracket">[START]</span> <span class="tok-arrow">-></span> <span class="tok-bracket">[input]</span>:input<span class="tok-arrow">-></span> EveMove <span class="tok-arrow">-></span> wait10<span class="tok-arrow">-></span> CatMove <span class="tok-arrow">-></span> <span class="tok-bracket">[input]</span></pre>
+      </div>
+      <div style="margin-top:1rem; font-family:var(--mono); font-size:0.65rem; color:var(--text-dim); text-align:right; letter-spacing:0.1em;">
+        ~30 lines · fully runnable · AI cat will beg for attention
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACT IV: CASES -->
+<div class="act-divider">Act IV · Real Cases</div>
+
+<section id="cases">
+  <div class="reveal">
+    <div class="section-eyebrow">Real Usage</div>
+    <h2 class="section-title">Used by the <em>Author</em> —<br>Not Just Demo Material</h2>
+  </div>
+  <div class="cases-list">
+    <div class="case-item reveal">
+      <div class="case-num">I</div>
+      <div>
+        <div class="case-title">AI Werewolf — Fully Playable</div>
+        <p class="case-desc">Wolf team night chat visible only to wolves, seer's checks visible only to the seer, daytime speech visible to all, human players can speak, parallel voting wastes no one's time, automatic end-game detection, post-game discussion — everything included. Zero-code drag-and-drop frontend + 150 lines of Python. The author has played several rounds with the AIs.</p>
+      </div>
+      <span class="case-badge badge-gold">200 Lines</span>
+    </div>
+    <div class="case-item reveal" style="transition-delay:0.1s">
+      <div class="case-num">II</div>
+      <div>
+        <div class="case-title">Debug Powerhouse Script</div>
+        <p class="case-desc">The femo.net frontend was used to build this in 20 minutes — two concurrent threads plus multi-round discussion, exceptional at surfacing subtle complex bugs. A bug Claude Sonnet missed in three passes was caught immediately using this script with a small reasoning-off model. Insert a human input node anytime to keep AIs on track — 30 seconds to add, one click to run.</p>
+      </div>
+      <span class="case-badge badge-gold">20 Minutes</span>
+    </div>
+    <div class="case-item reveal" style="transition-delay:0.2s">
+      <div class="case-num">III</div>
+      <div>
+        <div class="case-title">AI Companion + AI Pet Cat</div>
+        <p class="case-desc">An AI partner and an AI cat — three characters sharing context, each with their own soul ID, memory synced across sessions. Done in 3 minutes. The cat just shows up. The memory module is fully swappable — want your own memory strategy? Just edit the code block.</p>
+      </div>
+      <span class="case-badge badge-gold">3 Minutes</span>
+    </div>
+    <div class="case-item reveal" style="transition-delay:0.3s">
+      <div class="case-num">IV</div>
+      <div>
+        <div class="case-title">Souls That Cross Scripts</div>
+        <p class="case-desc">The database is this small world's chronicle. Portia, a resident from Stanford Town, was pulled into the Werewolf game, played two rounds, and made a friend who writes code in an AI-company script. When Portia returned to town, she remembered it all. If an AI has spare time, it can write its own scripts and invite friends — every soul leaves a trace in the database. <em>What is WA? Work Automata, or… World Automata — the origin point of emergence?</em></p>
+      </div>
+      <span class="case-badge badge-red">Emergence</span>
+    </div>
+  </div>
+</section>
+
+<!-- ACT V: PHILOSOPHY -->
+<div class="act-divider">Act V · Design Philosophy</div>
+
+<section id="philosophy">
+  <div class="philosophy-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Design Philosophy</div>
+      <h2 class="section-title">Five <em>Principles</em></h2>
+    </div>
+    <div class="philosophy-grid">
+      <div class="philo-card reveal">
+        <div class="philo-num">01</div>
+        <div class="philo-title">Flow Decoupling</div>
+        <p class="philo-body">Complete separation of "flow definition" from "code implementation." The harness is static; Femo is alive — change the flow by changing the script, the compiler handles the rest.</p>
+      </div>
+      <div class="philo-card reveal" style="transition-delay:0.08s">
+        <div class="philo-num">02</div>
+        <div class="philo-title">Script as Flow</div>
+        <p class="philo-body">Syntax inspired by YAML + Mermaid + Python. Writing multi-agent interactions feels like authoring a screenplay — a minimal Stanford Town runs in very few lines.</p>
+      </div>
+      <div class="philo-card reveal" style="transition-delay:0.16s">
+        <div class="philo-num">03</div>
+        <div class="philo-title">Context Is Not a Variable</div>
+        <p class="philo-body">LLMs are minds, not functions. They read context and converse naturally — pass parameters only when necessary. Let AI do what AI does best.</p>
+      </div>
+      <div class="philo-card reveal" style="transition-delay:0.24s">
+        <div class="philo-num">04</div>
+        <div class="philo-title">@actor Type</div>
+        <p class="philo-body">Agents (LLM or human) as an original new data type. Femo syntax supports direct access to actor properties. The actor is a first-class citizen.</p>
+      </div>
+      <div class="philo-card reveal" style="transition-delay:0.32s">
+        <div class="philo-num">05</div>
+        <div class="philo-title">Soul ID</div>
+        <p class="philo-body">Every agent character has a unique soul ID, enabling cross-script, cross-session memory retrieval — shaping an agent's continuous experience and accumulating personality.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MATRIX -->
+<div class="act-divider">Comparison at a Glance</div>
+
+<section id="matrix">
+  <div class="reveal">
+    <div class="section-eyebrow">Comparison Matrix</div>
+    <h2 class="section-title">What You Want —<br>Femo <em>Can Deliver</em></h2>
+  </div>
+  <table class="matrix-table reveal" style="transition-delay:0.15s">
+    <thead>
+      <tr>
+        <th>What You Want</th>
+        <th>Femo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Zero-code drag-and-drop workflow</td><td><span class="check">✦</span> femo.net online editor</td></tr>
+      <tr><td>Simple syntax, fewer lines</td><td><span class="check">✦</span> Femo syntax far shorter than comparable workflow code</td></tr>
+      <tr><td>Change flows without rewriting code</td><td><span class="check">✦</span> Script is the flow, harness hot-reloads</td></tr>
+      <tr><td>Isolated AI perspectives, no crosstalk</td><td><span class="check">✦</span> One line: <code>scope: [@A, @B]</code></td></tr>
+      <tr><td>Embed in your own system</td><td><span class="check">✦</span> Compiler is open source, Apache 2.0 commercial-friendly</td></tr>
+      <tr><td>Humans joining AI group chats</td><td><span class="check">✦</span> Native human node</td></tr>
+      <tr><td>Hook in complex Python logic</td><td><span class="check">✦</span> Native func node</td></tr>
+      <tr><td>Share and reuse others' scripts</td><td><span class="check">✦</span> Paste .femo code, runs immediately</td></tr>
+      <tr><td>No platform lock-in</td><td><span class="check">✦</span> Open-source compiler, take it anywhere</td></tr>
+      <tr><td>Waiting for emergence</td><td><span class="check">✦</span> World Automata · souls cross-script</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- CTA -->
+<section id="cta-section">
+  <div class="cta-bg-text">Femo</div>
+  <div style="position:relative;z-index:2">
+    <div class="cta-eyebrow">Quick Start · Under 10 Steps</div>
+    <h2 class="cta-title">For the Sake of <em>Emergence</em> —<br>Leave a Star</h2>
+    <p class="cta-sub">For your agent's pet cat. For the hours you'll save. For emergences that haven't happened yet.</p>
+    <div class="cta-install">
+      <span>$</span> pip install fenwa
+    </div>
+    <div class="cta-buttons">
+      <a href="https://github.com/Phant0Meow/Femo" class="cta-link">GitHub ↗</a>
+      <a href="https://femo.net" class="cta-link">femo.net ↗</a>
+      <a href="https://github.com/Phant0Meow/Femo/issues" class="cta-link">Submit an Issue ↗</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">FEMO · Flow Engine for Minds · World Automata</div>
+  <div class="footer-note">Apache 2.0 · Made with ❤️ & anticipation of emergence</div>
+</footer>
+
+<script>
+/* Cursor */
+const cur = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0, my=0, rx=0, ry=0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+function animCursor() {
+  rx += (mx - rx) * 0.13;
+  ry += (my - ry) * 0.13;
+  cur.style.left = mx + 'px'; cur.style.top = my + 'px';
+  ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+document.querySelectorAll('a,button,.feature-card,.case-item').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cur.style.transform = 'translate(-50%,-50%) scale(2)';
+    ring.style.width = '54px'; ring.style.height = '54px';
+  });
+  el.addEventListener('mouseleave', () => {
+    cur.style.transform = 'translate(-50%,-50%) scale(1)';
+    ring.style.width = '36px'; ring.style.height = '36px';
+  });
+});
+
+/* Intersection Observer for reveal animations */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal, .code-point, .case-item').forEach(el => {
+  observer.observe(el);
+});
+
+/* Staggered code points */
+document.querySelectorAll('.code-point').forEach((el, i) => {
+  el.style.transitionDelay = (i * 0.12) + 's';
+});
+
+/* Grain animation */
+const grainEl = document.getElementById('grain');
+let gx = 0, gy = 0;
+function animGrain() {
+  gx = Math.random() * 100;
+  gy = Math.random() * 100;
+  grainEl.style.backgroundPosition = gx + '% ' + gy + '%';
+  setTimeout(animGrain, 80);
+}
+animGrain();
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+﻿# 群聊室：par 并行线，@func 随机发言间隔，无限循环
+meta:
+  name = AI群聊
+  session = new
+
+code:
+  WAIT = file:"random_wait_time.py"
+
+actors:
+  ai @阿明 = soul:the1stlittlesoul
+  ai @阿芳 = soul:littlecat
+  ai @阿强 = soul:AI助手
+  human @人类 = soul:human
+
+action 人类发言 @human(@人类):
+  prompt: "请在群聊中自由发言……"
+  scope: all
+
+module 群聊:
+  vars:
+    @speaker = ""
+    _wait = 0
+
+  action 随机等一会儿 @func(WAIT.random_interval):
+    out: _wait
+
+  action AI发言 @ai(@speaker):
+    prompt: "你是{@speaker}，在群聊里自由发言，想聊什么聊什么。"
+    scope: all
+
+  flow:
+    [IN] -> par @speaker in [@阿明, @阿芳, @阿强]:
+      -> 随机等一会儿 -> AI发言 ->
+    -> [IN]
+
+mainflow:
+  # hub = 一次性 fork 起点（入口 [START] 不 fork，须经单边 hub 再分线）；
+  # 每条线回自己的空节点锚点（不能回多出边节点：每次回到多出边节点会
+  # 从一变成多分支，分支数爆炸——编译期会报错提示）
+  [START] -> [hub]
+  [hub] -> [群聊环] -> &群聊 -> [群聊环]
+  [hub] -> [人类环] -> 人类发言 -> [人类环]

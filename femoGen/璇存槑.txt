@@ -1,0 +1,15 @@
+每次更新在本目录运行这两步。
+
+1.创建新的dist文件夹：
+
+npm run build
+
+
+2. 上传给Cloudflare服务器：
+
+wrangler pages deploy ./dist --project-name=femo
+
+
+rm -r dist
+npm run build
+wrangler pages deploy ./dist --project-name=femo

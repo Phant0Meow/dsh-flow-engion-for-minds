@@ -1,0 +1,57 @@
+meta:
+  name = goblin-mini
+  session = new
+
+vars:
+  @hero = ""
+  player_choice = "接受"
+  refuse_count = 0
+  alive_party = [@knight, @mage, @rogue, @player]
+  count = 0
+
+actors:
+  ai @guildmaster = soul:the1stlittlesoul
+  ai @knight = soul:littlecat
+  ai @mage = soul:AI助手
+  ai @rogue = soul:Portia
+  human @player = soul:human, source:0
+
+action noop @assign:
+  out:
+    count += 1
+
+module BattleRound:
+  flow:
+
+  sketch:
+    [OUT] = 600, 200
+
+mainflow:
+  [opening]: noop
+  [BattleRound]: &BattleRound
+  [decline_quest]: noop
+  [FAREWELL]: noop
+  [ASK]: noop
+  [B1]: 
+  [GO]: noop
+  [WIN]: 
+  [NO]: noop
+  [NO2]: noop
+  [L]: noop
+  [LP]: noop
+  [START] -> [opening]
+  [opening] -> [ASK]
+  [ASK] -> [B1]
+  [B1] -> fork:
+    -> if (player_choice == "接受") -> [GO]
+    -> if (player_choice == "拒绝" and refuse_count < 2) -> [NO]
+    -> if (player_choice == "拒绝" and refuse_count >= 2) -> [NO2]
+  [GO] -> [BattleRound]
+  [BattleRound] -> [WIN]
+  [WIN] -> for @hero in alive_party:
+    -> if (@hero.type == "ai") -> [L] ->
+    -> if (@hero.type == "human") -> [LP] ->
+  -> [FAREWELL] -> [END]
+  [NO] -> [decline_quest]
+  [decline_quest] -> [ASK]
+  [NO2] -> [END]

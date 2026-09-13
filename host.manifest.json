@@ -1,0 +1,6 @@
+{
+  "$comment": "宿主能力清单（A2.1 解耦）：femoCompiler/host_manifest.py 在桥启动时读取。这里是 DSH 接口侧提供的 harness 词汇与环境——换一个 agent harness 只需换这份文件，引擎零改动。字段缺失/文件缺失时引擎用内置缺省（standalone 自圆满）。模型目录是动态的，不在此文件：由宿主在 job_start/check 经协议参数 models 注入。",
+  "host": "dsh",
+  "thinking_levels": ["off", "minimal", "low", "medium", "high", "xhigh", "max"],
+  "default_user_id": "u001"
+}

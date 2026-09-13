@@ -1,0 +1,132 @@
+meta:
+  name = 哥布林讨伐队(演示)
+  version = 1.0
+  database = file:"memory/goblin.db"
+  session = new
+  system_safety = |
+    禁止输出违法、色情、血腥内容。
+    禁止替其他角色做决定，禁止透露其他角色的视角信息。
+  output_style = "角色扮演发言,简洁有画面感,不要输出流程元信息。"
+
+actors:
+  ai @guildmaster = soul:1, source:glm5
+  ai @knight = soul:2, source:glm5.1
+  ai @mage = soul:3, source:glm5.1
+  ai @rogue = soul:4, source:glm5
+  human @player = soul:9, source:0
+
+code:
+  battle = file:"utils/battle.py"
+
+vars:
+  @hero = ""
+  player_choice = ""
+  refuse_count = 0
+  alive_party = [@knight, @mage, @rogue, @player]
+  hp = {@knight: 100, @mage: 80, @rogue: 90, @player: 100}
+  enemy_hp = 150
+  battle_round = 0
+  damage_report = {}
+  memory_text = ""
+  context_text = ""
+
+action opening @ai(@guildmaster):
+  prompt: |
+    你是哥布林讨伐队的队长。深夜的酒馆里，你召集了骑士、法师、盗贼，
+    还有一位新来的冒险者（{@player}）。
+    用一段有画面感的开场白说明任务：村外洞穴里盘踞着哥布林首领（血量 {enemy_hp}）。
+    说完后，目光投向 {@player}，等 TA 表态。
+  scope: [@guildmaster, @knight, @mage, @rogue, @player]
+  memory: recent_mem
+  context: this_session
+
+action accept_quest @human(@player):
+  prompt: |
+    "队长问你：要不要接下这个讨伐委托？"
+  scope: [@guildmaster, @player]
+  out:
+    player_choice(dropdown, choices={["接受", "拒绝"]}, label="是否接受委托")
+
+action count_refuse @assign:
+  out:
+    refuse_count += 1
+
+action decline_quest @ai(@guildmaster):
+  prompt: |
+    {@player} 又一次拒绝了。你作为队长不生气，用一两句俏皮话挽留：
+    比如「哥布林首领昨晚又踩碎了我家花盆」，然后再次询问 TA 的决定。
+  scope: [@guildmaster, @player]
+
+action decline_final @ai(@guildmaster):
+  prompt: |
+    {@player} 坚持拒绝。你叹口气：「那今晚的酒钱我请了，收工！」
+    宣布解散，结束今晚的冒险。
+  scope: [@guildmaster, @player]
+
+action plan_quest @ai(@guildmaster):
+  prompt: |
+    队伍出发了！你是队长，请部署战术：骑士正面吸引火力，法师远程输出，
+    盗贼绕后偷袭，{@player} 自由发挥。部署完毕，大喝一声「出发！」。
+  scope: [@guildmaster, @knight, @mage, @rogue, @player]
+
+action victory @ai(@guildmaster):
+  prompt: |
+    哥布林首领倒下了！请宣布胜利，并宣布战利品：每人 50 金币 + 一块哥布林护符。
+    然后让每位队员轮流说一句感想。
+  scope: [@guildmaster, @knight, @mage, @rogue, @player]
+
+action loot_share @ai(@hero):
+  prompt: |
+    战斗胜利！你（{@hero}）分到了 50 金币和一块哥布林护符。
+    说一句符合你职业性格的感想。
+  scope: [@hero, @guildmaster]
+
+action player_loot @human(@hero):
+  prompt: |
+    "战斗胜利！你也分到了 50 金币和一块哥布林护符。说点什么吧！"
+  scope: [@guildmaster, @hero]
+
+action farewell @ai(@guildmaster):
+  prompt: |
+    "夜色已深。作为队长，请用一句温暖的话收尾，约定下次冒险。"
+  scope: [@guildmaster, @knight, @mage, @rogue, @player]
+
+module BattleRound:
+  flow:
+
+
+  sketch:
+    [OUT] = 600, 200
+
+mainflow:
+  [opening]: opening
+  [BattleRound]: &BattleRound
+  [decline_quest]: decline_quest
+  [FAREWELL]: farewell
+  [ASK]: accept_quest
+  [B1]: 
+  [GO]: plan_quest
+  [WIN]: 
+  [NO]: count_refuse
+  [NO2]: decline_final
+  [L]: loot_share
+  [LP]: player_loot
+  [FAREWELL] -> [END]: 
+
+  [START] -> [opening]
+  [opening] -> [ASK]
+  [ASK] -> [B1]
+  [B1] -> fork:
+    -> if (player_choice == "接受") -> [GO]
+    -> if (player_choice == "拒绝" and refuse_count < 2) -> [NO]
+    -> if (player_choice == "拒绝" and refuse_count >= 2) -> [NO2]
+  [GO] -> [BattleRound]
+  [BattleRound] -> [WIN]
+  [WIN] -> for @hero in alive_party:
+    -> if (@hero.type == "ai") -> [L] ->
+    -> if (@hero.type == "human") -> [LP] ->
+  -> [FAREWELL] -> [END]
+  [NO] -> [decline_quest]
+  # for loop -> [ASK] while true
+  [decline_quest] -> [ASK]
+  [NO2] -> [END]

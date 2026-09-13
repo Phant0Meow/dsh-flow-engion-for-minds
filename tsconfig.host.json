@@ -1,0 +1,9 @@
+{
+  "//": "Host-side type check only (2026-08-23 refactor). The shared tsconfig includes client.tsx, whose react types are not installed in this plugin's node_modules — full-project tsc never passed even before the refactor. This config checks the Node-side modules only; run with: node <workspace>/typescript/bin/tsc -p tsconfig.host.json. 2026-08-26: exclude src/client-ui — the split-out browser .ts modules (stream-store/view-state) must not enter host type check (no react types here, esbuild-only like the rest of the client side).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["hostAdapter/host/**/*.ts"],
+  "exclude": ["hostAdapter/client"]
+}

@@ -1,0 +1,8 @@
+# dsh-femo bundle patch: inserts this plugin into a profile's layer stack.
+# Applied when a profile lists this bundle (or copied by hand for manual
+# installs).
+- insert:
+    - id: dsh-femo
+      name: 'dsh-femo'
+      config:
+        enabled: true

@@ -1,0 +1,13 @@
+meta:
+  name = AI 单节点测试
+  session = new
+
+actors:
+  ai @Eve = soul:the1stlittlesoul
+
+action speak @ai(@Eve):
+  prompt: 说一句简短的中文问候，不超过20字。
+  scope: [@Eve]
+
+mainflow:
+  [START] -> speak -> [END]

@@ -1,0 +1,13 @@
+meta:
+  name = 最小测试剧本
+  session = new
+
+vars:
+  msg = "初始值"
+
+action setmsg @assign:
+  out:
+    msg = "Hello from Femo 引擎！"
+
+mainflow:
+  [START] -> setmsg -> [END]

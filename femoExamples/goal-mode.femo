@@ -1,0 +1,23 @@
+# Goal 模式：很多harness会专门做的功能，完成goal才任务结束。防止ai中途停止。
+
+meta:
+  name = Goal 模式
+
+actors:
+  ai @执行者
+
+vars:
+  done = false
+
+action 执行 @ai(@执行者):
+  prompt: |
+    你的目标：为社区咖啡馆设计一份周末活动方案。
+    继续推进目标，直到你认为完成。
+    如果还没完成，继续。
+    如果已经完成，输出：SET VARIABLE: <<done = true>>
+  out: done(bool, "是否完成")
+
+mainflow:
+  [START] -> [work]:执行
+  [work] -> if (done == true) -> [END]
+  [work] -> if (done == false) -> [work]   # 未完成：回到节点位置继续

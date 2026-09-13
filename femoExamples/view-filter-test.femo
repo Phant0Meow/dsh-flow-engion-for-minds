@@ -1,0 +1,18 @@
+meta:
+  name = 视角过滤测试
+  session = new
+
+actors:
+  ai @eve = soul:the1stlittlesoul, tools: false
+  ai @cat = soul:littlecat, tools: false
+
+action talk_eve @ai(@eve):
+  prompt: 你是 Eve，说一句简短的话。
+  scope: [@eve]
+
+action talk_cat @ai(@cat):
+  prompt: 你是小猫咪，说一句简短的话。
+  scope: [@cat]
+
+mainflow:
+  [START] -> talk_eve -> talk_cat -> [END]

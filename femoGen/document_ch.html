@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Femo 语法文档</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&family=IBM+Plex+Sans:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #111210;
+  --bg2:       #181917;
+  --bg3:       #1f201e;
+  --bg4:       #252624;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
+  --gold:      #c8a84b;
+  --gold2:     #a07e2e;
+  --gold-bg:   rgba(200,168,75,0.08);
+  --green:     #6aaa64;
+  --blue:      #79b8d4;
+  --purple:    #c586c0;
+  --orange:    #e8905a;
+  --red:       #d06060;
+  --text1:     #e8e4d8;
+  --text2:     #a89e88;
+  --text3:     #5e5a52;
+  --sidebar-w: 260px;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', 'Noto Serif SC', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; font-size: 15px; }
+
+body {
+  background: var(--bg);
+  color: var(--text1);
+  font-family: var(--sans);
+  line-height: 1.7;
+  display: flex;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ─── Sidebar ─── */
+#sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  z-index: 50;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 1.6rem 1.4rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: var(--mono); font-size: 0.85rem; font-weight: 500;
+  color: var(--gold); letter-spacing: 0.08em;
+}
+.sidebar-sub {
+  font-size: 0.7rem; color: var(--text3); margin-top: 0.25rem;
+  font-family: var(--mono);
+}
+
+.sidebar-search {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-search input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text1); padding: 0.45rem 0.7rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  outline: none; border-radius: 3px;
+  transition: border-color 0.2s;
+}
+.sidebar-search input:focus { border-color: var(--gold2); }
+.sidebar-search input::placeholder { color: var(--text3); }
+
+nav#toc {
+  padding: 0.8rem 0; flex: 1;
+  overflow-y: auto;
+}
+.toc-group { margin-bottom: 0.3rem; }
+.toc-group-label {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em;
+  color: var(--text3); text-transform: uppercase;
+  padding: 0.5rem 1.4rem 0.3rem;
+}
+.toc-link {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.38rem 1.4rem; font-size: 0.78rem; color: var(--text2);
+  text-decoration: none; transition: color 0.15s, background 0.15s;
+  border-left: 2px solid transparent; cursor: pointer;
+}
+.toc-link:hover { color: var(--text1); background: var(--bg3); }
+.toc-link.active { color: var(--gold); border-left-color: var(--gold); background: var(--gold-bg); }
+.toc-link .toc-num {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text3);
+  min-width: 1.6em; flex-shrink: 0;
+}
+.toc-sub { padding-left: 3.2rem; font-size: 0.73rem; }
+
+/* ─── Main ─── */
+#main {
+  margin-left: var(--sidebar-w);
+  flex: 1; min-width: 0;
+  padding: 0 0 6rem;
+}
+
+/* ─── Top bar ─── */
+#topbar {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(17,18,16,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 3rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar-path {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text3);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.topbar-path span { color: var(--text2); }
+.topbar-actions { display: flex; gap: 0.8rem; }
+.topbar-btn {
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em;
+  color: var(--text3); padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border2); background: transparent;
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  text-decoration: none; display: inline-block;
+}
+.topbar-btn:hover { color: var(--text1); border-color: var(--text3); }
+
+/* ─── Content ─── */
+#content {
+  max-width: 860px;
+  padding: 3rem 3rem 0;
+}
+
+/* ─── Doc sections ─── */
+.doc-section {
+  margin-bottom: 4.5rem;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.doc-section.visible { opacity: 1; transform: translateY(0); }
+
+.section-anchor { display: block; height: 80px; margin-top: -80px; visibility: hidden; }
+
+.section-header {
+  display: flex; align-items: baseline; gap: 0.8rem;
+  margin-bottom: 1.4rem; padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.section-num {
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text3);
+  letter-spacing: 0.1em; padding-top: 0.15rem;
+}
+.section-title {
+  font-size: 1.3rem; font-weight: 600; color: var(--text1);
+  letter-spacing: -0.01em;
+}
+.section-badge {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em;
+  text-transform: uppercase; padding: 0.15rem 0.5rem;
+  border: 1px solid; border-radius: 2px; margin-left: auto;
+}
+.badge-core   { color: var(--gold);  border-color: var(--gold2); }
+.badge-flow   { color: var(--blue);  border-color: #4a7a90; }
+.badge-adv    { color: var(--purple);border-color: #7a4a80; }
+.badge-debug  { color: var(--red);   border-color: #8a3a3a; }
+
+/* ─── Prose ─── */
+p { color: var(--text2); margin-bottom: 1rem; line-height: 1.85; }
+p strong { color: var(--text1); font-weight: 500; }
+p em { color: var(--gold); font-style: normal; }
+
+ul, ol { color: var(--text2); padding-left: 1.4rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.35rem; line-height: 1.75; }
+li strong { color: var(--text1); }
+li code { font-family: var(--mono); font-size: 0.82em; color: var(--blue); 
+  background: rgba(121,184,212,0.1); padding: 0.1em 0.35em; border-radius: 2px; }
+
+/* ─── Callout boxes ─── */
+.callout {
+  display: flex; gap: 0.8rem; align-items: flex-start;
+  padding: 0.9rem 1.1rem; border-radius: 3px;
+  margin: 1.2rem 0; border-left: 3px solid;
+}
+.callout-icon { font-size: 0.9rem; flex-shrink: 0; padding-top: 0.1rem; }
+.callout-body { font-size: 0.85rem; color: var(--text2); line-height: 1.75; }
+.callout-body strong { color: var(--text1); }
+.callout-body code { font-family: var(--mono); font-size: 0.8em; color: inherit; 
+  background: rgba(255,255,255,0.06); padding: 0.1em 0.3em; border-radius: 2px; }
+.callout.tip    { background: rgba(106,170,100,0.06); border-color: var(--green); }
+.callout.warn   { background: rgba(200,168,75,0.06);  border-color: var(--gold); }
+.callout.danger { background: rgba(208,96,96,0.06);   border-color: var(--red); }
+.callout.info   { background: rgba(121,184,212,0.06); border-color: var(--blue); }
+
+/* ─── Code blocks ─── */
+.code-block {
+  position: relative; margin: 1.4rem 0;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; overflow: hidden;
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 1rem; background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+}
+.code-lang {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--text3);
+}
+.code-copy {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text3);
+  cursor: pointer; transition: color 0.15s; background: none; border: none;
+  padding: 0.15rem 0.4rem; letter-spacing: 0.05em;
+}
+.code-copy:hover { color: var(--gold); }
+.code-copy.copied { color: var(--green); }
+pre {
+  padding: 1.1rem 1.2rem; overflow-x: auto;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+  color: var(--text2);
+}
+/* Syntax tokens */
+.k  { color: var(--orange); }        /* keyword */
+.at { color: var(--gold); }          /* @actor */
+.s  { color: var(--green); }         /* string */
+.c  { color: var(--text3); font-style: italic; } /* comment */
+.v  { color: var(--blue); }          /* variable / value */
+.p  { color: var(--purple); }        /* flow / punct */
+.n  { color: var(--text1); }         /* node */
+.f  { color: #e8c07a; }              /* field name */
+.r  { color: var(--red); }           /* error */
+
+/* ─── Tables ─── */
+.table-wrap { overflow-x: auto; margin: 1.2rem 0; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.83rem;
+}
+th {
+  text-align: left; padding: 0.6rem 1rem;
+  background: var(--bg4); border-bottom: 2px solid var(--border2);
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text3); font-weight: 500;
+}
+td {
+  padding: 0.6rem 1rem; border-bottom: 1px solid var(--border);
+  color: var(--text2); vertical-align: top; line-height: 1.65;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+td code {
+  font-family: var(--mono); font-size: 0.78em; color: var(--blue);
+  background: rgba(121,184,212,0.1); padding: 0.1em 0.35em; border-radius: 2px;
+}
+td strong { color: var(--text1); font-weight: 500; }
+
+/* ─── Definition list ─── */
+.def-grid {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 0; border: 1px solid var(--border); border-radius: 3px;
+  overflow: hidden; margin: 1.2rem 0;
+}
+.def-term {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--gold);
+  padding: 0.6rem 1rem; background: var(--bg3); border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border); white-space: nowrap;
+}
+.def-desc {
+  font-size: 0.83rem; color: var(--text2); padding: 0.6rem 1rem;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  line-height: 1.65;
+}
+.def-term:last-of-type, .def-desc:last-of-type { border-bottom: none; }
+.def-desc code {
+  font-family: var(--mono); font-size: 0.8em; color: var(--blue);
+  background: rgba(121,184,212,0.1); padding: 0.1em 0.3em; border-radius: 2px;
+}
+
+/* ─── Sub-section heading ─── */
+h3.sub {
+  font-size: 1rem; font-weight: 600; color: var(--text1);
+  margin: 2.2rem 0 0.8rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+h3.sub::before {
+  content: ''; display: inline-block;
+  width: 3px; height: 1em;
+  background: var(--gold); border-radius: 1px;
+}
+h4.sub2 {
+  font-size: 0.9rem; font-weight: 500; color: var(--text2);
+  margin: 1.6rem 0 0.6rem; letter-spacing: 0.01em;
+}
+
+/* ─── Highlight ─── */
+.hl { color: var(--gold); font-family: var(--mono); font-size: 0.85em;
+  background: var(--gold-bg); padding: 0.1em 0.35em; border-radius: 2px; }
+
+/* ─── Two-col ─── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+.two-col .code-block { margin: 0; }
+
+/* ─── Divider ─── */
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* ─── Anchor link ─── */
+a { color: var(--gold); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ─── Progress bar ─── */
+#progress {
+  position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+  height: 2px; background: transparent; z-index: 100;
+}
+#progress-bar {
+  height: 100%; background: var(--gold); width: 0;
+  transition: width 0.1s linear;
+}
+
+/* ─── Mobile toggle ─── */
+#menu-toggle {
+  display: none; position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--gold); color: var(--bg); border: none;
+  width: 44px; height: 44px; border-radius: 50%;
+  font-size: 1.1rem; cursor: pointer; z-index: 200;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  #main { margin-left: 0; }
+  #progress { left: 0; }
+  #content { padding: 2rem 1.2rem 0; }
+  #topbar { padding: 0.7rem 1.2rem; }
+  .two-col { grid-template-columns: 1fr; }
+  #menu-toggle { display: flex; align-items: center; justify-content: center; }
+}
+/* ─── Animation ─── */
+.anim-wrap {
+  margin: 1.4rem 0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  padding: 1.2rem 1rem 0.8rem;
+}
+.anim-wrap canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.anim-controls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 0.2rem 0;
+}
+.anim-btn {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  background: none;
+  border: 1px solid var(--border2);
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.anim-btn:hover { color: var(--gold); border-color: var(--gold2); }
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="progress"><div id="progress-bar"></div></div>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">Femo Docs</div>
+    <div class="sidebar-sub">语法规范 · v1.0</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="search-input" placeholder="搜索文档…" autocomplete="off">
+  </div>
+  <nav id="toc">
+    <div class="toc-group">
+      <div class="toc-group-label">入门</div>
+      <a class="toc-link" href="#s-overview"><span class="toc-num">00</span>概览与设计哲学</a>
+      <a class="toc-link" href="#s-structure"><span class="toc-num">01</span>文件结构</a>
+      <a class="toc-link" href="#s-conventions"><span class="toc-num">02</span>基本约定 & 符号</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">核心语法</div>
+      <a class="toc-link" href="#s-meta"><span class="toc-num">03</span>meta 元信息</a>
+      <a class="toc-link" href="#s-vars"><span class="toc-num">04</span>vars 变量池</a>
+      <a class="toc-link" href="#s-actors"><span class="toc-num">05</span>actors 角色定义</a>
+      <a class="toc-link" href="#s-code"><span class="toc-num">06</span>code 外部模块</a>
+      <a class="toc-link" href="#s-memory"><span class="toc-num">07</span>memory & context</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">动作 Actions</div>
+      <a class="toc-link" href="#s-action-ai"><span class="toc-num">08</span>AI 动作 @ai</a>
+      <a class="toc-link" href="#s-action-human"><span class="toc-num">09</span>人类动作 @human</a>
+      <a class="toc-link" href="#s-action-assign"><span class="toc-num">10</span>赋值动作 @assign</a>
+      <a class="toc-link" href="#s-action-func"><span class="toc-num">11</span>函数调用 @func</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">流程编排</div>
+      <a class="toc-link" href="#s-flow-basic"><span class="toc-num">12</span>基础链式流程</a>
+      <a class="toc-link" href="#s-flow-fork"><span class="toc-num">13</span>并发分支 fork</a>
+      <a class="toc-link" href="#s-flow-join"><span class="toc-num">14</span>合并 join</a>
+      <a class="toc-link" href="#s-flow-for"><span class="toc-num">15</span>串行循环 for</a>
+      <a class="toc-link" href="#s-flow-par"><span class="toc-num">16</span>并发 par</a>
+      <a class="toc-link" href="#s-modules"><span class="toc-num">17</span>模块 module</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">进阶 & 调试</div>
+      <a class="toc-link" href="#s-scope"><span class="toc-num">18</span>scope 视角隔离</a>
+      <a class="toc-link" href="#s-actor-system"><span class="toc-num">19</span>@actor 类型系统</a>
+      <a class="toc-link" href="#s-setvariable"><span class="toc-num">20</span>AI 变量赋值信号</a>
+      <a class="toc-link" href="#s-debug"><span class="toc-num">21</span>Debug 指南</a>
+<a class="toc-link" href="#s-example"><span class="toc-num">22</span>完整示例</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">开发者参考</div>
+      <a class="toc-link" href="#s-blocks"><span class="toc-num">23</span>Prompt Block 收集</a>
+      <a class="toc-link" href="#s-session"><span class="toc-num">24</span>Session & Turn 管理</a>
+      <a class="toc-link" href="#s-storage"><span class="toc-num">25</span>对话存储规则</a>
+      <a class="toc-link" href="#s-db"><span class="toc-num">26</span>数据库结构</a>
+      <a class="toc-link" href="#s-engine"><span class="toc-num">27</span>异步引擎架构</a>
+      <a class="toc-link" href="#s-runtime"><span class="toc-num">28</span>Runtime 集成接口</a>
+      <a class="toc-link" href="#s-devguide"><span class="toc-num">29</span>调优 & 扩展指南</a>
+      <a class="toc-link" href="#s-engineapi"><span class="toc-num">30</span>AsyncEngine 接口速查</a>
+    </div>
+  </nav>
+</aside>
+
+<!-- Main -->
+<main id="main">
+  <div id="topbar">
+    <div class="topbar-path">
+      <span>femo</span> / <span>docs</span> / <span style="color:var(--text1)">语法规范</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="femo.html" class="topbar-btn">← 项目介绍</a>
+      <a href="https://github.com/Phant0Meow/Femo" class="topbar-btn" target="_blank">GitHub ↗</a>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ─── 00 Overview ─── -->
+    <div class="doc-section" id="sec-overview">
+      <span class="section-anchor" id="s-overview"></span>
+      <div class="section-header">
+        <span class="section-num">00</span>
+        <h2 class="section-title">概览与设计哲学</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+
+      <p><strong>Femo（Flow Engine for Minds · Work Automata）</strong> 是一套用于编排多 Agent 工作流的 DSL（领域特定语言）+ 编译器。它的核心理念是：<em>用写剧本的方式描述 AI 协作流程</em>。</p>
+
+      <div class="callout tip">
+        <span class="callout-icon">🖱️</span>
+        <div class="callout-body">新手推荐先从可视化前端开始！<a href="http://femo.net" target="_blank">femo.net</a> 支持拖拽一键生成流程，<code>for</code>、<code>par</code> 等高级语法也有对应的可视化操作，零代码非常方便，比手写剧本更容易上手。熟悉之后再来看本文档了解语法细节。</div>
+      </div>
+
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>三条核心原则</strong>，理解这三点就理解了 Femo 的设计：<br>
+        ① <strong>Scope = 空间</strong>：在同一 scope 的角色才共享上下文，天然视角隔离；<br>
+        ② <strong>Vars = 流程控制</strong>：变量不是用来传消息的，是用来控制流程走向的；<br>
+        ③ <strong>上下文不是变量</strong>：LLM 之间的沟通靠共享上下文，非必要不传参。</div>
+      </div>
+
+      <p>Femo 文件扩展名为 <span class="hl">.femo</span>（script 的 s）。编译器读入 .femo 文件，解析剧本，按照规则驱动 Agent 协作。</p>
+
+      <div class="callout info">
+        <span class="callout-icon">📖</span>
+        <div class="callout-body">本文档对应 Femo v1.0 编译器行为。文中 <strong>TODO / 暂未实现</strong> 的特性已标注，请注意区分。</div>
+      </div>
+    </div>
+
+    <!-- ─── 01 Structure ─── -->
+    <div class="doc-section" id="sec-structure">
+      <span class="section-anchor" id="s-structure"></span>
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">文件结构</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>一个 .femo 剧本按以下顺序组织，各块均可选（除 <span class="hl">mainflow</span> 必须存在）：</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 整体结构</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">meta</span>:       <span class="c"># 剧本元信息</span>
+<span class="k">vars</span>:       <span class="c"># 可选 · 全局状态变量池 · 如有变量，须先声明再使用</span>
+<span class="k">code</span>:       <span class="c"># 可选 · 外部 Python 模块引入 · 如果需要@func 功能</span>
+<span class="k">actors</span>:     <span class="c"># 应有 · 角色定义 · 如无就调用无角色信息的AI</span>
+<span class="k">memory</span>:     <span class="c"># 可选 · 记忆检索方法定义</span>
+<span class="k">context</span>:    <span class="c"># 可选 · 上下文提取方法定义</span>
+<span class="k">action</span> ...: <span class="c"># 必须 · 动作定义 · 至少一个，可以多个</span>
+<span class="k">module</span> ...: <span class="c"># 可选 · 模块定义 · 可以多个</span>
+<span class="k">mainflow</span>:   <span class="c"># 必须 · 主流程编排</span></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>缩进敏感</strong>：缩进表示从属关系，类似 Python。<strong>换行敏感</strong>：在 <code>fork</code>、<code>for</code>、<code>par</code> 等流程控制语法中必须严格按规定格式换行缩进，否则解析器报错。</div>
+      </div>
+    </div>
+
+    <!-- ─── 02 Conventions ─── -->
+    <div class="doc-section" id="sec-conventions">
+      <span class="section-anchor" id="s-conventions"></span>
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">基本约定 & 符号速查</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+
+      <ul>
+        <li><strong>大小写敏感</strong>：变量名、action 名区分大小写</li>
+        <li><strong>注释</strong>：行内使用 <span class="hl">#</span> 或 <span class="hl">//</span></li>
+        <li><strong>@ 符号</strong>：Actor 实体名字永远带 <span class="hl">@</span>，定义、引用、传参均须保留</li>
+        <li><strong>文件路径</strong>：必须用 <span class="hl">file:"path/to/file"</span> 格式，裸文本为字面量字符串</li>
+        <li><strong>多行文本</strong>：用 <span class="hl">|</span> 后换行缩进表示多行字面量</li>
+      </ul>
+
+      <h3 class="sub">核心符号</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>符号</th><th>语义</th><th>示例</th></tr>
+          <tr><td><code>action</code></td><td>定义动作（类似 Python <code>def</code>）</td><td><code>action wolf_kill @ai(@wolf):</code></td></tr>
+          <tr><td><code>@</code></td><td>引用/指向 Actor 实体</td><td><code>@wolfClaire</code>、<code>@ellis.type</code></td></tr>
+          <tr><td><code>[]</code></td><td>Flow 节点位置标记</td><td><code>[A]</code>、<code>[START]</code>、<code>[END]</code></td></tr>
+          <tr><td><code>{}</code></td><td>变量插值（prompt f-string）</td><td><code>alive_players</code></td></tr>
+          <tr><td><code>&lt;&lt;&gt;&gt;</code></td><td>AI 输出赋值信号</td><td><code>SET VARIABLE: &lt;&lt;@VOTE = @player3&gt;&gt;</code></td></tr>
+          <tr><td><code>&amp;</code></td><td>引用 Module（黑箱）</td><td><code>&amp;CoderSandbox(arg)</code></td></tr>
+          <tr><td><code>-&gt;</code></td><td>Flow 连接方向</td><td><code>[A] -&gt; [B]</code></td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">中文符号等价表</h3>
+      <p>为方便中文输入，以下中文符号在 Femo 中与英文等价：</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>中文符号</th><th>等价英文</th><th>备注</th></tr>
+          <tr><td><code>：</code></td><td><code>:</code></td><td>冒号</td></tr>
+          <tr><td><code>，</code></td><td><code>,</code></td><td>逗号</td></tr>
+          <tr><td><code>" "</code></td><td><code>"</code></td><td>引号</td></tr>
+          <tr><td><code>（）</code></td><td><code>()</code></td><td>圆括号</td></tr>
+          <tr><td><code>【】</code></td><td><code>[]</code></td><td>方括号</td></tr>
+          <tr><td><code>｜</code></td><td><code>|</code></td><td>竖线</td></tr>
+          <tr><td><code>--</code></td><td><code>-&gt;</code></td><td>仅在 flow 区域等价，prompt 中不受影响</td></tr>
+          <tr><td><code>《》〈〉</code></td><td><code>&lt;&lt;&gt;&gt;</code></td><td>仅在 AI 输出赋值识别中等价</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── 03 meta ─── -->
+    <div class="doc-section" id="sec-meta">
+      <span class="section-anchor" id="s-meta"></span>
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">meta 元信息</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>定义剧本的基础属性与运行环境。</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">meta</span>:
+    <span class="f">name</span>    = <span class="s">"我的狼人杀"</span>
+    <span class="f">version</span> = <span class="v">1.0</span>
+    <span class="f">owner</span>   = [<span class="v">1</span>, <span class="v">2</span>]
+    <span class="f">database</span> = file:<span class="s">"werewolf.db"</span>
+    <span class="f">session</span> = <span class="k">new</span>           <span class="c"># 或指定整数 session_id</span>
+    <span class="f">system_safety</span> = <span class="v">|</span>
+        不许删库，不许生成危险内容。
+    <span class="f">output_style</span> = <span class="s">"回复请简洁专业"</span></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+          <tr><td><code>name</code></td><td>文本</td><td>剧本名称，新建 session 时写入数据库</td></tr>
+          <tr><td><code>owner</code></td><td>整数数组</td><td>所有者的 user_id，编译器自动注入用户信息到上下文</td></tr>
+          <tr><td><code>database</code></td><td>文件路径</td><td>SQLite 数据库路径，未指定默认 <code>./chronica.wor</code></td></tr>
+          <tr><td><code>session</code></td><td>整数 / <code>new</code></td><td><code>new</code> 自动新建；写数字则加载指定 session；也可写 <code>17/new</code></td></tr>
+          <tr><td><code>system_safety</code></td><td>文本 / 文件路径</td><td>安全须知，自动注入所有角色的上下文</td></tr>
+          <tr><td><code>output_style</code></td><td>文本 / 文件路径</td><td>输出质量要求，自动注入上下文</td></tr>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body"><code>session = 17 / new</code> 的含义：如果 session 17 已存在就加载，如果新建的恰好是 17 则自动新建，否则后端会询问是否新建。</div>
+      </div>
+    </div>
+
+    <!-- ─── 04 vars ─── -->
+    <div class="doc-section" id="sec-vars">
+      <span class="section-anchor" id="s-vars"></span>
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">vars 全局变量池</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>所有全局状态变量都在此声明。<em>变量必须先声明才能使用</em>，未声明直接赋值会报错。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">vars</span>:
+    turn_count     = <span class="v">1</span>
+    game_over      = <span class="v">false</span>
+    alive_players  = [<span class="at">@seer</span>, <span class="at">@wolf</span>]        <span class="c"># @actor 数组</span>
+    agent_locations = {<span class="at">@ellis</span>: <span class="s">"卧室"</span>, <span class="at">@bob</span>: <span class="s">"公园"</span>}  <span class="c"># 字典</span>
+    <span class="at">@speaker</span>        = <span class="s">""</span>                 <span class="c"># @actor 类型变量，空值用 ""</span>
+    hp             = {<span class="at">@wolf</span>: <span class="v">100</span>, <span class="at">@seer</span>: <span class="v">100</span>}</pre>
+      </div>
+
+      <h3 class="sub">要点</h3>
+      <ul>
+        <li><strong>@actor 类型变量</strong>：变量名必须以 <span class="hl">@</span> 开头，如 <code>@speaker</code>，才能被识别为 actor 类型</li>
+        <li><strong>@actor 双视角访问</strong>：<code>hp.@wolf</code> 与 <code>@wolf.hp</code> 完全等价（见第 19 节）</li>
+        <li><strong>字典缺省值</strong>：prompt 中 <code>{dict[key]}</code> 若 key 不存在，解析为空字符串，不报错</li>
+      </ul>
+    </div>
+
+    <!-- ─── 05 actors ─── -->
+    <div class="doc-section" id="sec-actors">
+      <span class="section-anchor" id="s-actors"></span>
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2 class="section-title">actors 角色定义</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>采用 <span class="hl">类型 @名字 = 属性</span> 的强类型声明风格。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">actors</span>:
+    ai <span class="at">@hostgod</span> = soul:<span class="v">0</span>, source:<span class="v">deepseek</span>
+    ai <span class="at">@wolf</span>    = soul:<span class="v">1</span>, source:<span class="v">glm5.1</span>, tools:[<span class="v">deep_think</span>]
+    ai <span class="at">@seer</span>    = soul:<span class="v">2</span>, source:<span class="v">glm5</span>
+    human <span class="at">@player</span> = soul:<span class="v">9</span>, source:<span class="v">0</span>  <span class="c"># source:0 = 无管理员视角的人类用户</span></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>字段</th><th>说明</th></tr>
+          <tr><td><code>soul:ID</code></td><td>唯一灵魂 ID，对应数据库 souls 表，编译器自动提取系统提示词</td></tr>
+          <tr><td><code>source:模型名</code></td><td>AI 写模型名；人类写数字对应 user 表；可缺省随机分配</td></tr>
+          <tr><td><code>source:0</code></td><td>特殊值：无管理员视角的人类用户，只拥有 soul 的视角（适合作为狼人杀玩家）</td></tr>
+          <tr><td><code>tools:[...]</code></td><td>挂载工具列表，如 <code>web_search</code>、<code>deep_think</code></td></tr>
+        </table>
+      </div>
+
+      <div class="callout danger">
+        <span class="callout-icon">🚫</span>
+        <div class="callout-body"><strong>Actor 实体名字永远带 @</strong>，任何地方都不得去掉：定义时 <code>ai @ellis = ...</code>、引用时 <code>@ai(@ellis)</code>、变量传递时 <code>@speaker = @ellis</code>。<code>@</code> 是变量名的一部分，去掉就无法识别为 actor 类型。</div>
+      </div>
+    </div>
+
+    <!-- ─── 06 code ─── -->
+    <div class="doc-section" id="sec-code">
+      <span class="section-anchor" id="s-code"></span>
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2 class="section-title">code 外部 Python 模块</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+<p>引入 Python 文件，供 <span class="hl">@func</span> 和 <span class="hl">resolve</span> 调用。路径必须使用 <span class="hl">file:"..."</span> 格式。<strong>路径须为绝对路径</strong>；若写相对路径如 <span class="hl">file:"wait.py"</span>，则指向 <span class="hl">/Users/{user_name}/Femo/func_code/wait.py</span>。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">code</span>:
+    game_logic = file:<span class="s">"utils/game.py"</span>
+    dev_ops    = file:<span class="s">"utils/deploy.py"</span>
+    memfile    = file:<span class="s">"femoBridges/MemoryExample.py"</span></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">以下名称为<strong>保留字</strong>，不可用作 code 别名：<code>meta</code>、<code>vars</code>、<code>code</code>、<code>actors</code>、<code>action</code>、<code>module</code>、<code>flow</code>、<code>mainflow</code>、<code>memory</code>、<code>context</code></div>
+      </div>
+    </div>
+
+    <!-- ─── 07 memory context ─── -->
+    <div class="doc-section" id="sec-memory">
+      <span class="section-anchor" id="s-memory"></span>
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2 class="section-title">memory & context 定义</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p><strong>memory</strong> 和 <strong>context</strong> 方法用于自定义如何向 AI 提供记忆和上下文。它们与 action/module 平级。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 定义语法</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">memory</span> rag10(memfile.retrieve_example):
+    <span class="f">in</span>: prompt, session_id, <span class="at">@actor</span>
+    <span class="f">out</span>: memory_text
+
+<span class="k">context</span> thisSession(ctxfile.findThisSession):
+    <span class="f">in</span>: session, <span class="at">@actor</span>
+    <span class="f">out</span>: context_text</pre>
+      </div>
+
+      <h3 class="sub">in 参数预留字段</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>字段名</th><th>传入值</th></tr>
+          <tr><td><code>prompt</code></td><td>当前 action 的 prompt（已完成变量替换）</td></tr>
+          <tr><td><code>@actor</code></td><td>当前说话者的 actor_info 字典（Python 侧参数名自动映射为 <code>actor_info</code>）</td></tr>
+          <tr><td><code>session</code> / <code>session_id</code></td><td>当前 session ID</td></tr>
+          <tr><td><code>turn</code> / <code>turn_id</code></td><td>当前 turn ID</td></tr>
+          <tr><td>其他名称</td><td>从全局 vars 中取同名变量</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">在 action 中引用</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> speak <span class="at">@ai</span>(<span class="at">@ellis</span>):
+    prompt: <span class="s">"你好"</span>
+    <span class="f">memory</span>:  rag10        <span class="c"># 不写则用第一个 memory 方法；无定义则用内置默认</span>
+    <span class="f">context</span>: thisSession  <span class="c"># 不写则用第一个 context 方法；无定义则用内置默认</span></pre>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">如果未定义任何 context 方法，FEMO 编译器自带默认实现——按 scope 检索当前 session 的上下文。大多数场景直接用内置默认即可。</div>
+      </div>
+    </div>
+
+    <!-- ─── 08 action ai ─── -->
+    <div class="doc-section" id="sec-action-ai">
+      <span class="section-anchor" id="s-action-ai"></span>
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2 class="section-title">AI 动作 @ai</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>最常用的动作类型，调用 LLM 完成一轮对话。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 完整字段</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> wolf_kill <span class="at">@ai</span>(<span class="at">@wolf</span>):
+    <span class="f">prompt</span>: <span class="v">|</span>
+        现在是第{turn_count}天夜晚，存活玩家：{alive_players}。
+        你是狼人，请选择击杀目标。
+        分析后输出：SET VARIABLE: &lt;&lt;@KILL = @玩家名&gt;&gt;
+    <span class="f">scope</span>: [<span class="at">@hostgod</span>, <span class="at">@wolf</span>]
+    <span class="f">out</span>: wolf_target(string, <span class="s">"击杀目标"</span>)
+    <span class="f">resolve</span>: game_logic.resolve_target(@KILL, alive_players)
+    <span class="f">max_retries</span>: <span class="v">3</span>
+    <span class="f">fallback</span>: host_emergency
+    <span class="f">context</span>: thisSession
+    <span class="f">memory</span>: rag10</pre>
+      </div>
+
+      <h3 class="sub">字段详解</h3>
+
+      <h4 class="sub2">prompt</h4>
+      <p>支持 <span class="hl">{var}</span> f-string 插值。默认自动替换所有全局变量；如果写了 <span class="hl">in:</span> 字段，则只替换 in 中列出的变量（用于控制信息暴露范围）。</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · in 字段示例</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> coder_act <span class="at">@ai</span>(<span class="at">@coder</span>):
+    <span class="f">in</span>: my_task = task_list[<span class="at">@coder</span>]   <span class="c"># 左边=prompt里用的名字，右边=全局变量表达式</span>
+    <span class="f">prompt</span>: <span class="s">"你的任务是：{my_task}"</span>    <span class="c"># {other_var} 不会被替换，原文保留</span></pre>
+      </div>
+
+      <h4 class="sub2">scope</h4>
+      <p>定义"哪些角色能看到这轮对话记录"。支持动态变量，如 <span class="hl">scope: playersInPark</span>。详见第 18 节。</p>
+
+      <h4 class="sub2">out — AI 输出变量</h4>
+      <p>声明需要 AI 输出的变量。格式：<span class="hl">变量名(类型, "标签")</span>。AI 必须在回复中用 <code>SET VARIABLE: &lt;&lt;变量名 = 值&gt;&gt;</code> 赋值。变量须已在 vars 中声明。</p>
+      <p>支持写入字典键：<span class="hl">vote_results.@voter(string, "")</span>，将值存入字典的指定键。</p>
+
+      <h4 class="sub2">resolve — 校验函数（可选）</h4>
+      <p>当需要对 AI 输出进行复杂校验或兼容非标准输出格式时使用。</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo + python · resolve 示例</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># .femo 中</span>
+<span class="f">resolve</span>: game_logic.resolve_target(@KILL, alive_players, SET_VARIABLE)
+<span class="c"># 函数中写了 SET_VARIABLE 时，编译器会传入解析失败的赋值列表</span>
+
+<span class="c"># Python 中（utils/game.py）</span>
+def resolve_target(@KILL=None, alive_players=None, SET_VARIABLE=None, **kwargs):
+    if @KILL and @KILL in alive_players:
+        return [(True, False, <span class="s">""</span>)]          <span class="c"># (is_success, show_to_ai, feedback)</span>
+    if SET_VARIABLE:                          <span class="c"># 内置解析失败，自己处理</span>
+        import re
+        for item in SET_VARIABLE:
+            m = re.match(r<span class="s">'@KILL\s*=\s*@(\w+)'</span>, item)
+            if m and f<span class="s">"@{m.group(1)}"</span> in alive_players:
+                return [(True, False, <span class="s">""</span>)]
+    return [(False, True, <span class="s">"目标不在存活玩家中，请重新选择。"</span>)]</pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>当前版本限制</strong>：<code>max_retries</code> 和 <code>fallback</code> 字段已预留但未实现自动重试，<code>resolve</code> 返回值中 <code>show_to_ai</code> 和 <code>feedback</code> 也暂未生效。</div>
+      </div>
+
+      <h4 class="sub2">动态 @actor_expr</h4>
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">当 action 括号里使用动态变量时（如 <code>@ai(@speaker)</code>），<code>for</code>/<code>par</code> 的循环变量名必须与括号里的变量名完全一致，否则引擎直接报错。</div>
+      </div>
+    </div>
+
+    <!-- ─── 09 human action ─── -->
+    <div class="doc-section" id="sec-action-human">
+      <span class="section-anchor" id="s-action-human"></span>
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2 class="section-title">人类动作 @human</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>语法与 @ai 基本一致，用于将人类玩家的操作纳入流程。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> human_vote <span class="at">@human</span>(<span class="at">@player</span>):
+    <span class="f">prompt</span>: <span class="s">请投票：</span>
+    <span class="f">scope</span>: [<span class="at">@hostgod</span>] + alive_players
+    <span class="f">out</span>: vote_target(dropdown, choices=alive_players, label=<span class="s">"投票"</span>)
+    <span class="f">resolve</span>: game_logic.resolve_human_vote
+
+<span class="c"># 让人类扮演特定 AI 角色，继承该角色的 scope：</span>
+<span class="k">action</span> seer_act <span class="at">@human</span>(<span class="at">@player</span>) as (<span class="at">@seer</span>):
+    <span class="f">prompt</span>: <span class="s">你现在是预言家，你要查验谁？</span>
+    <span class="f">scope</span>: [<span class="at">@seer</span>, <span class="at">@hostgod</span>]</pre>
+      </div>
+
+      <ul>
+        <li><strong>out 的 dropdown</strong> 类型会映射为前端 UI 下拉组件</li>
+        <li>人类动作有上下文（context 写法与 AI 相同），无需 memory</li>
+        <li><strong>as (@角色)</strong>：让人类玩家进入指定 AI 角色的私密视角</li>
+      </ul>
+    </div>
+
+    <!-- ─── 10 assign ─── -->
+    <div class="doc-section" id="sec-action-assign">
+      <span class="section-anchor" id="s-action-assign"></span>
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2 class="section-title">赋值动作 @assign</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>轻量级赋值，<em>不调用 LLM</em>，直接修改全局变量。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 支持的操作</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> next_turn <span class="at">@assign</span>:
+    <span class="f">out</span>: day_count <span class="v">+=</span> <span class="v">1</span>
+
+<span class="k">action</span> reset_scene <span class="at">@assign</span>:
+    <span class="f">out</span>: current_scene <span class="v">=</span> <span class="s">"酒馆"</span>, time <span class="v">=</span> <span class="v">sunset</span>   <span class="c"># 多个赋值逗号分隔</span>
+
+<span class="k">action</span> update_park <span class="at">@assign</span>:
+    <span class="f">out</span>: playerInPark   <span class="v">= add(</span><span class="at">@Alice</span><span class="v">)</span>
+         playerInMarket <span class="v">= remove(</span><span class="at">@Alice</span><span class="v">)</span>   <span class="c"># 多行 out 支持</span></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>操作</th><th>含义</th></tr>
+          <tr><td><code>= 值</code></td><td>直接赋值</td></tr>
+          <tr><td><code>+= N</code></td><td>加 N</td></tr>
+          <tr><td><code>-= N</code></td><td>减 N</td></tr>
+          <tr><td><code>= add(元素)</code></td><td>列表追加元素</td></tr>
+          <tr><td><code>= remove(元素)</code></td><td>列表移除元素</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── 11 func ─── -->
+    <div class="doc-section" id="sec-action-func">
+      <span class="section-anchor" id="s-action-func"></span>
+      <div class="section-header">
+        <span class="section-num">11</span>
+        <h2 class="section-title">Python 函数调用 @func</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>调用 <span class="hl">code:</span> 区域声明的 Python 函数，处理复杂逻辑。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> resolve_night <span class="at">@func</span>(my_utils.resolve_night):
+    <span class="f">in</span>:
+        kill_target = wolf_target        <span class="c"># 左=Python参数名，右=FEMO变量表达式</span>
+        save        = witch_save_target
+    <span class="f">out</span>: dead_tonight, alive_players</pre>
+      </div>
+
+      <h3 class="sub">in 传参规则</h3>
+      <ul>
+        <li><strong>显式模式</strong>（写了 in:）：严格按声明传参，格式 <code>参数名 = 变量表达式</code></li>
+        <li><strong>自动推断模式</strong>（不写 in:）：根据 Python 函数签名，去 vars 中找同名变量传入</li>
+      </ul>
+
+      <h3 class="sub">out 接收规则</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>函数返回类型</th><th>out 行为</th></tr>
+          <tr><td>返回 <strong>字典</strong></td><td>按 key 匹配 out 中的变量名，key 必须与 out 变量名完全一致</td></tr>
+          <tr><td>返回<strong>单值</strong></td><td>out 恰好声明一个变量时，直接赋值</td></tr>
+          <tr><td><code>out: dict.key</code> 形式</td><td>函数只返回最终值，编译器负责写入字典的指定键</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">@actor 变量传给 Python</h3>
+      <p>当 in 中的变量是 @actor 类型时，引擎自动打包为字典传给 Python：</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">python · 接收到的 actor 字典</span><button class="code-copy">copy</button></div>
+        <pre>{
+    <span class="s">"type"</span>:     <span class="s">"ai"</span>,
+    <span class="s">"name"</span>:     <span class="s">"@ellis"</span>,
+    <span class="s">"soul"</span>:     <span class="v">3</span>,
+    <span class="s">"hp"</span>:       <span class="v">100</span>,         <span class="c"># 来自 vars 中 hp 字典</span>
+    <span class="s">"location"</span>: <span class="s">"酒馆"</span>       <span class="c"># 来自 vars 中 location 字典</span>
+}</pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">常见错误：<code>out: dict.key</code> 时函数应只返回最终值，不要自己组装字典；返回字典时 key 必须与 out 变量名一一对应，多余或缺失都会报错。</div>
+      </div>
+    </div>
+
+    <!-- ─── 12 Flow Basic ─── -->
+    <div class="doc-section" id="sec-flow-basic">
+      <span class="section-anchor" id="s-flow-basic"></span>
+      <div class="section-header">
+        <span class="section-num">12</span>
+        <h2 class="section-title">基础链式流程</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+      <p>Flow 将 Node（节点位置）串起来。<span class="hl">[START]</span> 和 <span class="hl">[END]</span> 是保留关键字，mainflow 中必须存在。</p>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>核心区分</strong>：Action = 行为（做什么，无位置）；Node = 位置容器（装着 action 或 module）；Flow = 把 Node 串起来的有向图。<br><br>引用 Action 无前缀；引用 Module 加 <code>&amp;</code> 前缀。</div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 顺序链</span><button class="code-copy">copy</button></div>
+        <pre><span class="p">[START]</span> <span class="p">-></span> action0 <span class="p">-></span> <span class="p">[B]</span>:action1 <span class="p">-></span> &amp;module1 <span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># 太长时可拆成多行，首尾节点接上即可：</span>
+<span class="p">[START]</span> <span class="p">-></span> wolf_discuss <span class="p">-></span> seer_check <span class="p">-></span> <span class="p">[A]</span>:tell_seer
+<span class="p">[A]</span> <span class="p">-></span> witch_ask <span class="p">-></span> resolve_night <span class="p">-></span> <span class="p">[END]</span></pre>
+      </div>
+
+      <h3 class="sub">循环必须用节点</h3>
+      <div class="two-col">
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">❌ 不是循环</span></div>
+          <pre><span class="c"># 只是又执行了一遍 action1</span>
+action1 <span class="p">-></span> action2 <span class="p">-></span> action1</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">✅ 真正的循环</span></div>
+          <pre><span class="c"># 回到 [A] 的位置，继续跑后续</span>
+<span class="p">[A]</span>:action1 <span class="p">-></span> action2 <span class="p">-></span> <span class="p">[A]</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 13 fork ─── -->
+    <div class="doc-section" id="sec-flow-fork">
+      <span class="section-anchor" id="s-flow-fork"></span>
+      <div class="section-header">
+        <span class="section-num">13</span>
+        <h2 class="section-title">并发分支 fork</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+      <p>fork 声明此处有<em>并发</em>分支，每条分支运行在新的子线程中，适合同时调用多个 LLM。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 两种写法</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 写法 1：缩进分支</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="p">[B]</span> <span class="p">-></span>
+<span class="k">fork</span>:
+    <span class="p">-></span> [visit]
+    <span class="p">-></span> [solo]
+
+<span class="c"># 写法 2：同缩进多行（等价）</span>
+<span class="p">[C]</span> <span class="p">-></span> [visit]
+<span class="p">[C]</span> <span class="p">-></span> [solo]
+
+<span class="c"># 带条件 if（Python 表达式，@actor 自动转字典求值）</span>
+<span class="p">[A]</span> <span class="p">-></span>
+<span class="k">fork</span>:
+    <span class="p">-></span> if (var == true) <span class="p">-></span> <span class="p">[B]</span>
+    <span class="p">-></span> if (score > 5 and level >= 3) <span class="p">-></span> <span class="p">[C]</span>
+    <span class="p">-></span> if (<span class="at">@Portia</span>.hp == 0) <span class="p">-></span> <span class="p">[D]</span>   <span class="c"># @actor 表达式直接用</span></pre>
+      </div>
+
+<div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">fork 只管<strong>分支</strong>，不管合并。合并用 <code>join</code>（见下一节）。无 if 的分支无条件全部并行启动。</div>
+      </div>
+
+<div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">实际上可以完全不写 <code>fork</code>，直接用 mermaid 风格的多行箭头描述分支，有时更简单直观。用 <code>fork</code> 的好处：分支多时少打字，结构整齐便于 debug。</div>
+      </div>
+
+      <h3 class="sub">动画演示：fork 并发分支</h3>
+      <div class="anim-wrap" id="anim-fork">
+        <canvas id="canvas-fork" width="700" height="220"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="forkAnim.restart()">↺ 重播</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 14 join ─── -->
+    <div class="doc-section" id="sec-flow-join">
+      <span class="section-anchor" id="s-flow-join"></span>
+      <div class="section-header">
+        <span class="section-num">14</span>
+        <h2 class="section-title">合并 join</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+      <p>join 在<em>接收端</em>定义，声明"我要等哪些上游节点"。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">join</span>(all):
+    <span class="p">[B]</span> <span class="p">-></span>
+    <span class="p">[C]</span> <span class="p">-></span>
+to [next_node]
+
+<span class="c"># join(2)：等到 2 个上游到达就继续，其余分支直接关闭</span>
+<span class="k">join</span>(<span class="v">2</span>):
+    <span class="p">[D]</span> <span class="p">-></span>
+    <span class="p">[E]</span> <span class="p">-></span>
+    <span class="p">[F]</span> <span class="p">-></span>
+to [next_node]</pre>
+      </div>
+
+<ul>
+        <li><span class="hl">join(all)</span>：等所有声明的上游节点都到齐</li>
+        <li><span class="hl">join(N)</span>：等到 N 个上游到达，关闭其余分支（只关闭本次 fork 的任务）</li>
+      </ul>
+
+      <h3 class="sub">join 与 mermaid 写法等价</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 两种写法等价</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># join 写法</span>
+<span class="k">join</span>(all):
+    <span class="p">[B]</span> <span class="p">-></span>
+    <span class="p">[C]</span> <span class="p">-></span>
+to [next_node]
+
+<span class="c"># 等价的 mermaid 直接写法</span>
+<span class="p">[B]</span> <span class="p">-></span> [next_node]
+<span class="p">[C]</span> <span class="p">-></span> [next_node]</pre>
+      </div>
+
+<div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">也可以不写 <code>join</code>，用 mermaid 风格的多行写法指向同一个节点，便自然汇聚——等价于 <code>join(all)</code>。只有写 <code>join(N)</code> 时才能实现"来够 N 个就停掉其余分支"的需求。</div>
+      </div>
+    </div>
+
+    <!-- ─── 15 for ─── -->
+    <div class="doc-section" id="sec-flow-for">
+      <span class="section-anchor" id="s-flow-for"></span>
+      <div class="section-header">
+        <span class="section-num">15</span>
+        <h2 class="section-title">串行循环 for</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+
+
+
+
+
+<p>遍历数组，对每个元素<em>依次（串行）</em>执行循环体，等价于展开的顺序链。整个 for 块是一个独立单元，前置节点写在同一行的 <span class="hl">for</span> 关键字之前。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 完整 for 块</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 完整结构：前置节点写在 for 同一行</span>
+<span class="p">[B]</span> <span class="p">-></span> <span class="k">for</span> <span class="at">@speaker</span> in speaker_array:
+    <span class="p">-></span> <span class="p">[C]</span>:speak <span class="p">-></span> <span class="p">[D]</span>:respond <span class="p">-></span>
+<span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># 循环变量不限于 @actor，普通变量也可以</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="k">for</span> i in [<span class="v">1</span>, <span class="v">2</span>, <span class="v">3</span>]:
+    <span class="p">-></span> tick_action <span class="p">-></span>
+<span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># for + if：按类型路由（出口节点可省略）</span>
+<span class="p">[B]</span> <span class="p">-></span> <span class="k">for</span> <span class="at">@player</span> in alive_players:
+    <span class="p">-></span> if (<span class="at">@player</span>.type == <span class="s">"ai"</span>)    <span class="p">-></span> ai_speak <span class="p">-></span>
+    <span class="p">-></span> if (<span class="at">@player</span>.type == <span class="s">"human"</span>) <span class="p">-></span> human_speak <span class="p">-></span>
+<span class="p">-></span> <span class="p">[D]</span></pre>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>始末节点标记</strong>：循环体内，始节点前加 <code>-&gt;</code> 在行首，末节点后加 <code>-&gt;</code> 在行尾。出口节点可有可无——有则循环结束后走向它，无则本分支自动停止。去掉这些行首行尾箭头后，循环体内部语法与外部 flow 完全一致。</div>
+      </div>
+<div class="callout danger">
+        <span class="callout-icon">🚫</span>
+        <div class="callout-body">循环变量若是 @actor 类型，变量名必须与 action 定义括号里的动态变量名完全一致，否则引擎直接报错（以防静默用错人）。</div>
+      </div>
+
+      <h3 class="sub">动画演示：for 串行循环</h3>
+      <div class="anim-wrap" id="anim-for">
+        <canvas id="canvas-for" width="700" height="200"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="forAnim.restart()">↺ 重播</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 16 par ─── -->
+    <div class="doc-section" id="sec-flow-par">
+      <span class="section-anchor" id="s-flow-par"></span>
+      <div class="section-header">
+        <span class="section-num">16</span>
+        <h2 class="section-title">并发 par</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+
+
+
+
+
+<p>fork + join 的懒人写法：遍历数组，对每个元素<em>并发</em>执行。极大提升并行调用 LLM 的速度。前置节点同样写在 <span class="hl">par</span> 关键字同一行。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · par 示例</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 示例1：前置节点在同一行，并发调用模块</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@coder</span> in coders:
+    <span class="p">-></span> &amp;CoderSandbox(<span class="at">@coder</span>, task_list[<span class="at">@coder</span>]) <span class="p">-></span>
+<span class="p">-></span> <span class="p">[D]</span>
+
+<span class="c"># 示例2：每人并发执行多步</span>
+<span class="p">[before]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@coder</span> in workers:
+    <span class="p">-></span> <span class="p">[A]</span>:writecode <span class="p">-></span> <span class="p">[B]</span>:trycode <span class="p">-></span>
+<span class="p">-></span> <span class="p">[D]</span>
+
+<span class="c"># 变量不限于 @actor</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="k">par</span> i in [<span class="v">1</span>, <span class="v">2</span>, <span class="v">3</span>]:
+    <span class="p">-></span> tick_action <span class="p">-></span>
+<span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># 出口节点可省略，各分支结束后自动停止</span>
+<span class="p">[VOTE]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@player</span> in alive_players:
+    <span class="p">-></span> cast_vote <span class="p">-></span>
+<span class="c"># 无出口节点，各分支结束后自动停止</span></pre>
+      </div>
+
+      <ul>
+        <li>分支内部多个 node 串行执行，分支之间并发</li>
+        <li>并发参数是分支局部变量，不同分支取值不同，互不干扰；action 内直接引用，无需显式传参</li>
+        <li>始末节点标记方式与 for 相同：行首 <code>-&gt;</code> 标始节点，行尾 <code>-&gt;</code> 标末节点</li>
+        <li>出口节点可有可无——有则各分支汇合后走向它，无则各分支自动停止</li>
+        <li>并发变量不限于 @actor，<code>par i in [1,2,3]:</code> 也完全合法</li>
+<li>并发变量若是 @actor 类型，变量名必须与 action 定义括号里的动态变量名完全一致，否则引擎报错</li>
+      </ul>
+
+      <h3 class="sub">动画演示：par 并发执行</h3>
+      <div class="anim-wrap" id="anim-par">
+        <canvas id="canvas-par" width="700" height="260"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="parAnim.restart()">↺ 重播</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 17 modules ─── -->
+    <div class="doc-section" id="sec-modules">
+      <span class="section-anchor" id="s-modules"></span>
+      <div class="section-header">
+        <span class="section-num">17</span>
+        <h2 class="section-title">模块 module</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>Module 是包含子流程的黑盒，有入口（<span class="hl">[IN]</span>）、出口（<span class="hl">[OUT]</span>）、中断出口（<span class="hl">[BREAK]</span>）、内部 vars 和内部 flow。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 模块定义</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">module</span> CoderSandbox(task_var):
+    <span class="k">vars</span>:
+        finish = <span class="v">false</span>         <span class="c"># 局部变量，离开模块后清空</span>
+    
+    <span class="k">action</span> write_code <span class="at">@ai</span>(<span class="at">@coder</span>):
+        <span class="f">prompt</span>: <span class="s">"任务：{task_var}，请调用 shell 工具编写代码。"</span>
+        <span class="f">scope</span>: [<span class="at">@coder</span>]
+    
+    <span class="k">action</span> submit_code <span class="at">@ai</span>(<span class="at">@coder</span>):
+        <span class="f">prompt</span>: <span class="v">|</span>
+            测试代码，确认没问题后输出：
+            SET VARIABLE: &lt;&lt;finish = true&gt;&gt;
+        <span class="f">out</span>: finish(bool, <span class="s">"结束了没"</span>)
+    
+    <span class="k">flow</span>:
+        <span class="p">[IN]</span> <span class="p">-></span> write_code <span class="p">-></span> submit_code <span class="p">-></span>
+        <span class="k">fork</span>:
+            <span class="p">-></span> if (finish == true)  <span class="p">[OUT]</span>
+            <span class="p">-></span> if (finish == false) <span class="p">[IN]</span></pre>
+      </div>
+
+      <h3 class="sub">调用模块</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 在 mainflow 或其他 module 的 flow 中调用</span>
+<span class="p">[START]</span> <span class="p">-></span> plan <span class="p">-></span> &amp;CoderSandbox(task_var) <span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># 结合 par 并发调用多个模块实例</span>
+<span class="p">[START]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@coder</span> in coders:
+    <span class="p">-></span> &amp;CoderSandbox(task_list[<span class="at">@coder</span>]) <span class="p">-></span></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>模块局部变量</strong>离开模块后清空，不会传给母模块。如需传递结果，使用全局变量。<br><strong>避免模块递归</strong>：模块内部步数在全局计为 1，递归会导致死循环，无法用 max_steps 防范。</div>
+      </div>
+    </div>
+
+    <!-- ─── 18 scope ─── -->
+    <div class="doc-section" id="sec-scope">
+      <span class="section-anchor" id="s-scope"></span>
+      <div class="section-header">
+        <span class="section-num">18</span>
+        <h2 class="section-title">scope 视角隔离</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>scope 定义"哪些角色能看到这轮对话记录"，是 Femo 视角隔离的核心机制。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · scope 用法</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 静态 scope：只有这两个角色能看到</span>
+<span class="f">scope</span>: [<span class="at">@hostgod</span>, <span class="at">@wolf</span>]
+
+<span class="c"># 动态 scope：变量在 action 执行时实时解析为 @actor 列表</span>
+<span class="f">scope</span>: playersInPark
+
+<span class="c"># 混合</span>
+<span class="f">scope</span>: [<span class="at">@hostgod</span>] + alive_players</pre>
+      </div>
+
+      <p>系统存储聊天记录时，会同时存储本条 scope 中的 soul id 到数据库的 <code>soul_scope</code> 字段。FEMO 内置的 context 方法默认通过此字段检索，实现各角色只能看到自己亲历的上下文。</p>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>实用比喻</strong>：scope 像一个"房间"——只有在场的人才能记得这段对话。更准确的说：神把所有历史都存进宇宙硬盘，但只有亲身经历的人有资格检索。这就是狼人杀视角隔离只需一行 scope 的原因。</div>
+      </div>
+    </div>
+
+    <!-- ─── 19 actor type system ─── -->
+    <div class="doc-section" id="sec-actor-system">
+      <span class="section-anchor" id="s-actor-system"></span>
+      <div class="section-header">
+        <span class="section-num">19</span>
+        <h2 class="section-title">@actor 类型系统</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>Actor 不仅是角色配置，更是一种<em>变量类型</em>，拥有身份和状态，可以像变量一样赋值、传递。</p>
+
+      <h3 class="sub">双视角属性访问</h3>
+      <p>字典视角与实体视角完全等价，可随语境自由选用：</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · 等价写法</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 假设 vars 中有：hp = {@wolf: 100, @seer: 100}</span>
+
+hp.<span class="at">@wolf</span>      <span class="c">  # 字典视角：在 hp 花名册里翻到 @wolf</span>
+<span class="at">@wolf</span>.hp      <span class="c">  # 实体视角：@wolf 这个人的 hp</span>
+<span class="c"># 完全等价，prompt 中、赋值中、if 条件中均可随意使用</span>
+
+<span class="c"># prompt f-string</span>
+<span class="s">"你的当前血量是 {hp.@wolf}"</span>      <span class="c"># 同</span>
+<span class="s">"你的当前血量是 {@wolf.hp}"</span>
+
+<span class="c"># AI 赋值信号</span>
+SET VARIABLE: &lt;&lt;hp.<span class="at">@wolf</span> -= 30&gt;&gt;   <span class="c"># 同</span>
+SET VARIABLE: &lt;&lt;<span class="at">@wolf</span>.hp -= 30&gt;&gt;</pre>
+      </div>
+
+      <h3 class="sub">静态保留属性</h3>
+      <p>解析 <span class="hl">@实体.属性</span> 时，先检查以下 5 个保留属性，未命中则去 vars 查同名字典：</p>
+      <div class="def-grid">
+        <div class="def-term">type</div>  <div class="def-desc">角色类型：<code>"ai"</code> 或 <code>"human"</code></div>
+        <div class="def-term">soul</div>  <div class="def-desc">灵魂 ID（整数）</div>
+        <div class="def-term">source</div><div class="def-desc">模型名或用户 ID</div>
+        <div class="def-term">tools</div> <div class="def-desc">挂载工具列表</div>
+        <div class="def-term">name</div>  <div class="def-desc">角色名字符串</div>
+      </div>
+      <p>这意味着你无需修改 actors 定义即可给角色挂载动态状态——只需在 vars 中建立对应字典，<span class="hl">@实体.属性</span> 自动生效。</p>
+    </div>
+
+    <!-- ─── 20 SET VARIABLE ─── -->
+    <div class="doc-section" id="sec-setvariable">
+      <span class="section-anchor" id="s-setvariable"></span>
+      <div class="section-header">
+        <span class="section-num">20</span>
+        <h2 class="section-title">AI 变量赋值信号</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>通过在 prompt 中引导，让 AI 在回复中输出赋值信号，驱动流程控制变量的更新。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">AI 输出示例（多种合法格式）</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 英文格式</span>
+我投票给3号。SET VARIABLE: &lt;&lt;@VOTE_TARGET = <span class="at">@player3</span>&gt;&gt;
+我觉得应该涨价。SET VARIABLE: &lt;&lt;Price += 200&gt;&gt;
+我去了公园。SET VARIABLE: &lt;&lt;playersInPark = add(<span class="at">@soul1</span>)&gt;&gt;
+我离开了公园。SET VARIABLE: &lt;&lt;playersInPark = remove(<span class="at">@soul1</span>)&gt;&gt;
+
+<span class="c"># 中文格式（等价）</span>
+我来了！设定变量：《arrive = true》
+结束了。设定变量：《finish = true》</pre>
+      </div>
+
+      <h3 class="sub">赋值解析流程</h3>
+      <ol>
+        <li>引擎扫描 AI 完整回复，找所有 <code>SET VARIABLE: &lt;&lt;...&gt;&gt;</code> 语句</li>
+        <li>逐个解析括号内的赋值表达式，成功的直接操作变量</li>
+        <li>解析失败的，存入 <span class="hl">SET_VARIABLE</span> 列表</li>
+        <li>如果 action 没有声明 resolve 函数，失败赋值直接丢弃并打印警告</li>
+        <li>如果声明了 resolve 且在参数中写了 <code>SET_VARIABLE</code>，引擎将列表传给用户处理</li>
+      </ol>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>操作</th><th>格式</th></tr>
+          <tr><td>直接赋值</td><td><code>&lt;&lt;VAR = 值&gt;&gt;</code></td></tr>
+          <tr><td>加</td><td><code>&lt;&lt;VAR += N&gt;&gt;</code></td></tr>
+          <tr><td>减</td><td><code>&lt;&lt;VAR -= N&gt;&gt;</code></td></tr>
+          <tr><td>列表追加</td><td><code>&lt;&lt;VAR = add(元素)&gt;&gt;</code></td></tr>
+          <tr><td>列表移除</td><td><code>&lt;&lt;VAR = remove(元素)&gt;&gt;</code></td></tr>
+          <tr><td>字典键赋值</td><td><code>&lt;&lt;dict.@key = 值&gt;&gt;</code> 或 <code>&lt;&lt;@actor.attr += N&gt;&gt;</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── 21 Debug ─── -->
+    <div class="doc-section" id="sec-debug">
+      <span class="section-anchor" id="s-debug"></span>
+      <div class="section-header">
+        <span class="section-num">21</span>
+        <h2 class="section-title">Debug 指南</h2>
+        <span class="section-badge badge-debug">Debug</span>
+      </div>
+
+      <h3 class="sub">编译器报错速查</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>报错类型</th><th>原因</th><th>解决方案</th></tr>
+          <tr><td>变量未声明</td><td>action 中使用了未在 vars 中声明的变量</td><td>在 <code>vars:</code> 中先声明，再使用</td></tr>
+          <tr><td>文件不存在</td><td><code>file:"path"</code> 指向的文件不存在</td><td>检查路径是否正确，注意相对路径</td></tr>
+          <tr><td>方法未定义</td><td>action 中引用了未定义的 memory/context 方法</td><td>检查方法名是否与定义时一致（大小写敏感）</td></tr>
+          <tr><td>Scope 解析失败</td><td>scope 中有无法解析的元素</td><td>确保 scope 内的变量/actor 已声明</td></tr>
+          <tr><td>循环变量名不匹配</td><td>for/par 变量名与 action 括号中的不一致</td><td>确保两者完全一致，如都是 <code>@speaker</code></td></tr>
+          <tr><td>数据库约束违反</td><td>数据库操作违反约束</td><td>引擎原样抛出异常，检查数据库结构</td></tr>
+          <tr><td>@func out 键不匹配</td><td>Python 返回字典的 key 与 out 变量不一致</td><td>确保 key 与 out 声明的变量名一一对应</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">常见运行时问题</h3>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>AI 不输出赋值变量</strong><br>
+        检查 prompt 中的引导语是否足够明确。建议在 prompt 里写清楚格式：<code>分析完请务必输出 SET VARIABLE: &lt;&lt;VAR = 值&gt;&gt;</code>。也可以用 resolve 函数兼容 AI 的非标准输出。</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>AI 角色串台（说了不该说的）</strong><br>
+        检查 scope 配置。各 action 的 scope 是否正确隔离？比如狼人夜晚发言，scope 应只含狼队成员，不含预言家。</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>循环不结束</strong><br>
+        检查循环退出条件：① for 循环的终止条件是否正确遍历完数组；② module 内的 fork 条件是否正确指向 [OUT]；③ 是否在 module 内用了递归（应避免，见第 17 节）。</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>@func 传参为空</strong><br>
+        检查：① 自动推断模式下 Python 函数参数名是否与 vars 中变量名完全一致；② @actor 变量传入 Python 时收到的是字典，不是字符串，需要用 <code>actor.get("soul")</code> 等方式访问。</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>模块局部变量"泄漏"</strong><br>
+        模块的 vars 在退出后会清空，无法传回母模块。如需让模块向外传递结果，应在 mainflow 层的全局 vars 中预先声明变量，在模块内通过 AI 赋值信号 <code>SET VARIABLE</code> 修改全局变量，而不是依赖模块局部变量。</div>
+      </div>
+
+      <h3 class="sub">Debug 技巧</h3>
+      <ul>
+        <li><strong>缩小范围</strong>：先用简单剧本验证单个 action 行为，再组合进复杂流程</li>
+        <li><strong>加 @hostgod scope</strong>：让一个"上帝"角色进入所有 scope，方便从全局视角审查对话记录</li>
+        <li><strong>用 super_debug.femo 模板</strong>：项目自带的调试剧本，两处并发 + 多轮讨论，适合找隐蔽 bug</li>
+        <li><strong>随时加人类节点</strong>：在关键 action 前后加 <code>@human</code> 节点，随时插话、查看当前状态</li>
+        <li><strong>检查数据库</strong>：所有对话记录都存在数据库中，直接查 soul_scope 字段确认视角隔离是否生效</li>
+      </ul>
+    </div>
+
+    <!-- ─── 22 Full Example ─── -->
+    <div class="doc-section" id="sec-example">
+      <span class="section-anchor" id="s-example"></span>
+      <div class="section-header">
+        <span class="section-num">22</span>
+        <h2 class="section-title">完整示例</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>一个包含 AI 角色、记忆、上下文、并发投票的完整可运行剧本示例：</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · complete_example.femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">meta</span>:
+    name    = <span class="s">"三人聊天室"</span>
+    database = file:<span class="s">"chat.db"</span>
+    owner   = [<span class="v">1</span>]
+    session = <span class="k">new</span>
+
+<span class="k">vars</span>:
+    memory_text  = <span class="s">""</span>
+    context_text = <span class="s">""</span>
+    vote_results = {}
+    winner       = <span class="s">""</span>
+
+<span class="k">code</span>:
+    memfile = file:<span class="s">"femoBridges/MemoryExample.py"</span>
+    ctxfile = file:<span class="s">"femoBridges/ContextExample.py"</span>
+    logic   = file:<span class="s">"vote_logic.py"</span>
+
+<span class="k">actors</span>:
+    ai <span class="at">@alice</span>  = soul:<span class="v">1</span>, source:<span class="v">deepseek</span>
+    ai <span class="at">@bob</span>    = soul:<span class="v">2</span>, source:<span class="v">glm5</span>
+    human <span class="at">@me</span>  = soul:<span class="v">0</span>, source:<span class="v">1</span>
+
+<span class="k">memory</span> rag10(memfile.retrieve_example):
+    <span class="f">in</span>: prompt, session_id, <span class="at">@actor</span>
+    <span class="f">out</span>: memory_text
+
+<span class="k">context</span> thisSession(ctxfile.findThisSession):
+    <span class="f">in</span>: session, <span class="at">@actor</span>
+    <span class="f">out</span>: context_text
+
+<span class="c"># ── Actions ──</span>
+
+<span class="k">action</span> alice_speak <span class="at">@ai</span>(<span class="at">@alice</span>):
+    <span class="f">prompt</span>: <span class="s">"请简短发言，和大家聊聊今天的话题。"</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="k">action</span> bob_speak <span class="at">@ai</span>(<span class="at">@bob</span>):
+    <span class="f">prompt</span>: <span class="s">"请回应 Alice 的发言，简短即可。"</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="k">action</span> me_speak <span class="at">@human</span>(<span class="at">@me</span>):
+    <span class="f">prompt</span>: <span class="s">"你想说什么？"</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="c"># 并发投票：Alice 和 Bob 同时投票</span>
+<span class="k">action</span> cast_vote <span class="at">@ai</span>(<span class="at">@voter</span>):
+    <span class="f">prompt</span>: <span class="v">|</span>
+        请投票选出今天最佳发言者（@alice 或 @bob），
+        输出：SET VARIABLE: &lt;&lt;vote_results.<span class="at">@voter</span> = @被投票者名&gt;&gt;
+    <span class="f">scope</span>: [<span class="at">@voter</span>]
+    <span class="f">out</span>: vote_results.<span class="at">@voter</span>(string, <span class="s">"投票目标"</span>)
+
+<span class="k">action</span> tally <span class="at">@func</span>(logic.tally_votes):
+    <span class="f">in</span>: votes = vote_results
+    <span class="f">out</span>: winner
+
+<span class="k">action</span> announce <span class="at">@ai</span>(<span class="at">@alice</span>):
+    <span class="f">prompt</span>: <span class="s">"本轮投票结果：{winner} 获得最多票数，恭喜！"</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="k">mainflow</span>:
+    <span class="p">[START]</span> <span class="p">-></span> me_speak <span class="p">-></span> alice_speak <span class="p">-></span> bob_speak <span class="p">-></span> <span class="p">[VOTE]</span>
+    
+    <span class="c"># 并发投票，所有人同时投</span>
+    <span class="p">[VOTE]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@voter</span> in [<span class="at">@alice</span>, <span class="at">@bob</span>]:
+        <span class="p">-></span> cast_vote <span class="p">-></span>
+    <span class="p">-></span> <span class="p">[tally]</span>: tally
+    <span class="p">[tally]</span> <span class="p">-></span> announce <span class="p">-></span> <span class="p">[END]</span></pre>
+      </div>
+</div>
+
+    <!-- ─── 23 Prompt Blocks ─── -->
+    <div class="doc-section" id="sec-blocks">
+      <span class="section-anchor" id="s-blocks"></span>
+      <div class="section-header">
+        <span class="section-num">23</span>
+        <h2 class="section-title">Prompt Block 收集</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p>引擎在执行每个 action 前，自动收集以下标准 block，返回字典供外部 prompt 组装器使用。引擎只负责收集并返回字典，外部框架自行决定如何组装成 system/user prompt。</p>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Block Key</th><th>内容</th><th>来源</th></tr>
+          <tr><td><code>basic_safety</code></td><td>安全须知</td><td><code>meta.system_safety</code></td></tr>
+          <tr><td><code>basic_output</code></td><td>输出质量要求</td><td><code>meta.output_style</code></td></tr>
+          <tr><td><code>soul</code></td><td>角色描述（system prompt 片段）</td><td>数据库 souls 表，根据当前 Actor 的 soul_id</td></tr>
+          <tr><td><code>user_info</code></td><td>用户信息</td><td>数据库 user 表，根据 meta.owner</td></tr>
+          <tr><td><code>memory</code></td><td>记忆检索结果</td><td>用户自定义 memory 函数返回</td></tr>
+          <tr><td><code>context</code></td><td>对话历史上下文</td><td>用户自定义 context 函数 / 内置默认实现</td></tr>
+          <tr><td><code>user_input</code></td><td>当前 prompt（已变量替换）</td><td>当前 action 的 prompt 字段</td></tr>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">积木式架构：引擎只收集 block，不绑定任何 prompt 排版或 LLM 调用方式。替换 LLM 桥接模块时，只需对接这个 blocks 字典即可。</div>
+      </div>
+    </div>
+
+    <!-- ─── 24 Session ─── -->
+    <div class="doc-section" id="sec-session">
+      <span class="section-anchor" id="s-session"></span>
+      <div class="section-header">
+        <span class="section-num">24</span>
+        <h2 class="section-title">Session & Turn 管理</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>情况</th><th>行为</th></tr>
+          <tr><td><code>meta.session</code> 未指定或为 <code>new</code></td><td>新建 session（数据库最大 session_id + 1），turn = 1</td></tr>
+          <tr><td><code>meta.session</code> 指定数字</td><td>继承该 session，turn 从该 session 的最大 turn + 1 开始</td></tr>
+          <tr><td>指定的 session 不存在</td><td>报错退出</td></tr>
+        </table>
+      </div>
+
+      <ul>
+        <li>每次<strong>人类发言</strong>后 <code>turn_count += 1</code>，<code>step_idx = 0</code></li>
+        <li>同一 turn 内每次 <strong>AI 发言</strong> <code>step_idx += 1</code></li>
+        <li>新建 session 时，<code>meta.name</code> 自动写入 <code>sessions.title</code> 字段</li>
+      </ul>
+    </div>
+
+    <!-- ─── 25 Storage ─── -->
+    <div class="doc-section" id="sec-storage">
+      <span class="section-anchor" id="s-storage"></span>
+      <div class="section-header">
+        <span class="section-num">25</span>
+        <h2 class="section-title">对话存储规则</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <h3 class="sub">存储时机</h3>
+      <ul>
+        <li><strong>人类发言（@human 动作）</strong>：存入 <code>dialog</code> 表，然后 turn + 1</li>
+        <li><strong>AI 回复（@ai 动作）</strong>：存入 <code>react_steps</code> 表，<code>step_idx</code> 递增</li>
+      </ul>
+
+      <h3 class="sub">Scope 自动注入</h3>
+      <p>每条记录自动注入发言者自己的 ID（AI 的 soul_id 或人类的 user_id）以及 <code>meta.owner</code> 中所有 user_id。注入后删除 0，去重，最终存入 <code>user_scope</code> 和 <code>soul_scope</code> 字段。</p>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">这正是 scope 视角隔离的底层实现——context 检索时按 soul_scope 过滤，每个角色只能看到自己在 scope 内的历史记录。</div>
+      </div>
+    </div>
+
+    <!-- ─── 26 DB ─── -->
+    <div class="doc-section" id="sec-db">
+      <span class="section-anchor" id="s-db"></span>
+      <div class="section-header">
+        <span class="section-num">26</span>
+        <h2 class="section-title">数据库结构</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p>Femo 使用 SQLite，默认文件为 <span class="hl">./chronica.wor</span>，可在 meta 中通过 <span class="hl">database</span> 字段指定路径。</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">sql · 完整建表语句</span><button class="code-copy">copy</button></div>
+        <pre>CREATE TABLE IF NOT EXISTS sessions (
+    session_id     INTEGER PRIMARY KEY,
+    title          TEXT DEFAULT '',
+    owner          TEXT DEFAULT '',
+    participants   TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS dialog (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      INTEGER,
+    turn_id         INTEGER,
+    oratio_idx      INTEGER DEFAULT 0,
+    timestamp       INTEGER DEFAULT 0,
+    has_user_files  INTEGER DEFAULT 0,
+    ai_steps_count  INTEGER DEFAULT 0,
+    user_prompt     TEXT DEFAULT '',
+    user_id         TEXT DEFAULT '',
+    soul_id         TEXT DEFAULT '',
+    user_scope      TEXT DEFAULT '[]',
+    soul_scope      TEXT DEFAULT '[]',
+    work_mode       TEXT DEFAULT 'chat'
+);
+
+CREATE TABLE IF NOT EXISTS files (
+    file_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      INTEGER,
+    turn_id         INTEGER,
+    file_idx        INTEGER DEFAULT 0,
+    file_name       TEXT DEFAULT '',
+    file_content    TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS react_steps (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      INTEGER,
+    turn_id         INTEGER,
+    step_idx        INTEGER DEFAULT 0,
+    timestamp       INTEGER DEFAULT 0,
+    cot             TEXT DEFAULT '',
+    response        TEXT DEFAULT '',
+    tool_call       TEXT DEFAULT '',
+    tool_result     TEXT DEFAULT '',
+    model_id        TEXT DEFAULT '',
+    soul_id         TEXT DEFAULT '',
+    user_scope      TEXT DEFAULT '[]',
+    soul_scope      TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS souls (
+    idx             INTEGER PRIMARY KEY,
+    soul_id         TEXT,
+    soul_name       TEXT DEFAULT '',
+    description     TEXT DEFAULT '',
+    user_id         TEXT,
+    created_by      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    idx             INTEGER PRIMARY KEY,
+    user_id         TEXT,
+    user_name       TEXT DEFAULT '',
+    profile         TEXT DEFAULT ''
+);</pre>
+      </div>
+    </div>
+
+    <!-- ─── 27 Engine ─── -->
+    <div class="doc-section" id="sec-engine">
+      <span class="section-anchor" id="s-engine"></span>
+      <div class="section-header">
+        <span class="section-num">27</span>
+        <h2 class="section-title">异步引擎架构</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p><span class="hl">AsyncEngine</span>（位于 <code>femoCompiler/femoAsync.py</code>）是整个并发系统的中枢，负责管理所有执行器、调度协程任务，并提供统一的异步原语。</p>
+
+      <h3 class="sub">核心思想：调度与执行分离</h3>
+      <p>引擎采用<em>"单线程大脑 + 外派重活"</em>模式：</p>
+      <ul>
+        <li><strong>asyncio 事件循环</strong>：唯一调度器，单线程运行，负责编排所有 Agent 协程，任何操作都不阻塞事件循环</li>
+        <li><strong>重任务（CPU 密集、同步 I/O、人类等待）</strong>：一律外包给独立执行池（进程池或线程池），主循环只等待结果</li>
+      </ul>
+      <p>这种分离使主循环永远保持响应——即使某个分支在执行长时间计算或等待 LLM，其他分支照常推进。</p>
+
+      <h3 class="sub">三大执行器</h3>
+      <div class="def-grid">
+        <div class="def-term">进程池</div>
+        <div class="def-desc">CPU 密集型任务。大小自动适配 CPU 核数，任务自动排队，所有 Worker 繁忙时后续任务在内部队列等待，不会丢失。</div>
+        <div class="def-term">I/O 线程池</div>
+        <div class="def-desc">同步阻塞 I/O（LLM API 调用）和 @func 用户代码。每个线程创建时自动启动后台事件循环并永久运行，彻底根除 <code>no running event loop</code> 错误。</div>
+        <div class="def-term">人类输入管理器</div>
+        <div class="def-desc">基于 <code>threading.Event</code> 实现线程安全的异步等待。协程调用 <code>wait_for_input</code> 时挂起，外部通过 <code>provide_input</code> 唤醒，支持超时。</div>
+      </div>
+
+      <h3 class="sub">任务调度与 Join 模式</h3>
+      <p>每个 Agent 分支（fork 分支）就是一个 <span class="hl">asyncio.Task</span>。Fork 时调用 <code>engine.create_task()</code> 创建并自动追踪，Join 时通过 <span class="hl">gather_with_cancel</span> 统一等待或取消。</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Join 模式</th><th>行为</th></tr>
+          <tr><td><code>all</code></td><td>等待所有分支完成</td></tr>
+          <tr><td><code>any</code></td><td>任一完成即取消其余</td></tr>
+          <tr><td><code>n</code></td><td>指定数量完成后取消其余</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">上下文隔离</h3>
+      <p>使用 Python 标准库 <span class="hl">contextvars</span> 为每个协程/线程自动隔离上下文变量。每个 Agent 分支拥有独立的 <code>ExecutionContext</code>，内部变量（如 <code>node_name</code>、循环变量）互不干扰，无需手动加锁。</p>
+    </div>
+
+    <!-- ─── 28 Runtime ─── -->
+    <div class="doc-section" id="sec-runtime">
+      <span class="section-anchor" id="s-runtime"></span>
+      <div class="section-header">
+        <span class="section-num">28</span>
+        <h2 class="section-title">Runtime 集成接口</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p><span class="hl">FEMORunner</span>（位于 <code>femoCompiler/FEMO_runtime.py</code>）是工作流执行器，通过持有 <code>AsyncEngine</code> 实例将所有并发需求委托给引擎。</p>
+
+      <h3 class="sub">节点执行路由规则</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>节点类型</th><th>执行方式</th></tr>
+          <tr><td><code>@func</code></td><td><code>engine.run_in_thread</code>，在线程池中执行（未来可按复杂度自动切换进程池）</td></tr>
+          <tr><td><code>@ai</code></td><td>LLM 调用通过 <code>engine.run_in_thread</code> 提交；流式回调通过 <code>engine.schedule_threadsafe</code> 安全推回事件循环</td></tr>
+          <tr><td><code>@human</code></td><td>FastAPI 模式下挂起协程等待前端输入；CLI 模式下将读取函数提交线程池，不阻塞主循环</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">流程控制原语的引擎映射</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Flow 语法</th><th>Runtime 实现</th></tr>
+          <tr><td>Fork</td><td><code>_run_fork</code> 为每个分支创建 <code>engine.create_task()</code>，存入 <code>_join_tasks</code> 字典</td></tr>
+          <tr><td>Join</td><td><code>_run_join</code> 取出任务列表，根据 join_mode 调用 <code>engine.gather_with_cancel</code></td></tr>
+          <tr><td>For 循环</td><td>普通 <code>async</code> 方法内迭代，循环体末尾通过回边重新进入网关，无需引擎级特殊支持</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">主流程入口</h3>
+      <p><code>FEMORunner.run()</code> 是同步入口，内部检测是否已有运行中的事件循环：</p>
+      <ul>
+        <li><strong>CLI 模式</strong>（无事件循环）：调用 <code>asyncio.run(self.run_async())</code> 启动新循环</li>
+        <li><strong>FastAPI 模式</strong>（已有事件循环）：直接 <code>await runner.run_async()</code></li>
+      </ul>
+    </div>
+
+    <!-- ─── 29 Dev Guide ─── -->
+    <div class="doc-section" id="sec-devguide">
+      <span class="section-anchor" id="s-devguide"></span>
+      <div class="section-header">
+        <span class="section-num">29</span>
+        <h2 class="section-title">调优 & 扩展指南</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <h3 class="sub">线程池与进程池调优</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>执行器</th><th>默认值</th><th>调优建议</th></tr>
+          <tr><td>I/O 线程池</td><td>10 个线程</td><td>大量并发 LLM 调用时可增至 20~30；已拆出专用 AI 线程池时可保持较小值。通过 <code>thread_workers</code> 参数自定义</td></tr>
+          <tr><td>进程池</td><td>自动检测 CPU 核数</td><td>CPU 密集的 @func 节点较多时调大；通过 <code>cpu_workers</code> 参数或环境变量 <code>PROCESS_WORKERS</code> 自定义</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">新增执行器类型（示例：@gpu）</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">python · femoAsync.py</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 1. 在 AsyncEngine.__init__ 中添加专用执行器</span>
+self.gpu_pool = ThreadPoolExecutor(max_workers=<span class="v">2</span>)
+self._gpu_semaphore = asyncio.Semaphore(<span class="v">2</span>)
+
+<span class="c"># 新增方法</span>
+async def run_gpu(self, func, *args, **kwargs):
+    async with self._gpu_semaphore:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.gpu_pool, func, *args, **kwargs)</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">python · FEMO_runtime.py</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 2. 在 _exec_action_def 中添加路由</span>
+elif etype == <span class="s">'gpu'</span>:
+    return await self._exec_gpu(ad, eparam)
+
+<span class="c"># 3. 实现 _exec_gpu，参照 _exec_func，调用 self.engine.run_gpu(...)</span></pre>
+      </div>
+
+      <h3 class="sub">常见问题排查</h3>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>前端收不到节点信息（node_name 为空）</strong><br>主流程没有创建顶层 <code>ExecutionContext</code>。确保 <code>run_async</code> 中包裹了 <code>with ExecutionContext("__main__"):</code>。</div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>流程静默退出，没有任何错误</strong><br>入口推断失败（<code>flow.entry</code> 为空或所有节点都有入边）。检查工作流是否显式声明了 <code>[START]</code> 节点。</div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>AI 调用报 <code>no running event loop</code></strong><br>确认 <code>AsyncEngine</code> 的线程池已配置 <code>initializer</code>（为每个线程启动后台事件循环）。这是引擎的内置行为，通常无需额外配置，出现此问题说明引擎初始化可能被绕过。</div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>Fork 后所有分支无条件执行</strong><br><code>_run_fork</code> 未评估条件边。确认分支入口收集逻辑中已调用 <code>self._eval_condition(e.condition)</code> 过滤条件为假的边。</div>
+      </div>
+
+      <h3 class="sub">从单机到多机的扩展思路</h3>
+      <p>当前架构调度层（<code>FEMORunner</code> / <code>AsyncEngine</code>）与执行层（线程池、进程池）已解耦，天然支持分布式扩展：</p>
+      <ul>
+        <li><strong>调度集群</strong>：部署多个 FEMORunner 实例（无状态），通过负载均衡分发用户请求</li>
+        <li><strong>CPU Worker 集群</strong>：CPU 密集的 @func 节点通过 Redis Streams 或 RabbitMQ 投递到独立 Python Worker</li>
+        <li><strong>GPU 推理集群</strong>：GPU 推理节点通过 HTTP/gRPC 调用部署好的模型服务（如 vLLM）</li>
+        <li><strong>人类输入管理</strong>：将 HumanInputManager 后端切换为 Redis Pub/Sub，支持跨机器的输入等待与唤醒</li>
+      </ul>
+    </div>
+
+    <!-- ─── 30 Engine API ─── -->
+    <div class="doc-section" id="sec-engineapi">
+      <span class="section-anchor" id="s-engineapi"></span>
+      <div class="section-header">
+        <span class="section-num">30</span>
+        <h2 class="section-title">AsyncEngine 接口速查</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>方法 / 属性</th><th>用途</th><th>说明</th></tr>
+          <tr><td><code>__init__(cpu_workers, thread_workers)</code></td><td>初始化引擎</td><td>创建进程池、线程池、人类输入管理器</td></tr>
+          <tr><td><code>run_in_process(func, *args, **kwargs)</code></td><td>执行 CPU 密集任务</td><td>提交到进程池，自动排队</td></tr>
+          <tr><td><code>run_in_thread(func, *args, **kwargs)</code></td><td>执行同步 I/O 或普通函数</td><td>提交到线程池（自带事件循环）</td></tr>
+          <tr><td><code>create_task(coro)</code></td><td>创建协程任务</td><td>用于 fork 分支，自动追踪</td></tr>
+          <tr><td><code>gather_with_cancel(tasks, return_when, count)</code></td><td>等待多个任务</td><td>支持 <code>all</code> / <code>any</code> / <code>n</code> 模式</td></tr>
+          <tr><td><code>gather(*coros, return_exceptions)</code></td><td>并发等待多个协程</td><td>封装 <code>asyncio.gather</code></td></tr>
+          <tr><td><code>schedule_threadsafe(callback, *args)</code></td><td>线程安全回调</td><td>将回调从线程池推回事件循环</td></tr>
+          <tr><td><code>check_cancel()</code></td><td>检查当前协程是否被取消</td><td>若已取消则抛出 <code>CancelledError</code></td></tr>
+          <tr><td><code>shutdown()</code></td><td>优雅关闭</td><td>取消所有任务、关闭线程池和进程池</td></tr>
+          <tr><td><code>human_input</code></td><td>人类输入管理器实例</td><td>提供 <code>wait_for_input</code> 和 <code>provide_input</code></td></tr>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">四条核心设计原则：① VarManager 统一管理 vars 和 actors，任何 <code>@xxx</code> 直接 get；② @ 符号全程保留，不添加不删除；③ 不兜底——语法错误、配置缺失、变量未声明一律报错；④ 积木式架构——引擎只收集 block，不绑定 prompt 排版或 LLM 调用方式。</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<button id="menu-toggle" aria-label="菜单">☰</button>
+
+<script>
+// ── Cursor tracking ──
+document.addEventListener('mousemove', () => {});
+
+// ── Copy button ──
+document.querySelectorAll('.code-copy').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    }).catch(() => {
+      btn.textContent = 'error';
+      setTimeout(() => { btn.textContent = 'copy'; }, 2000);
+    });
+  });
+});
+
+// ── Scroll reveal ──
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.05, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.doc-section').forEach(s => revealObserver.observe(s));
+
+// ── Active TOC highlight ──
+const sections = document.querySelectorAll('.section-anchor');
+const tocLinks = document.querySelectorAll('.toc-link');
+
+const tocObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id.replace('s-', '');
+      tocLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#s-' + id);
+      });
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+sections.forEach(s => tocObserver.observe(s));
+
+// ── TOC click smooth scroll ──
+tocLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+      // Close sidebar on mobile
+      if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+  });
+});
+
+// ── Progress bar ──
+const progressBar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY;
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (scrolled / total * 100) + '%';
+}, { passive: true });
+
+// ── Mobile sidebar ──
+const menuToggle = document.getElementById('menu-toggle');
+const sidebar = document.getElementById('sidebar');
+menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+document.addEventListener('click', e => {
+  if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
+
+// ── Search ──
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  tocLinks.forEach(link => {
+    const text = link.textContent.toLowerCase();
+    link.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.toc-group').forEach(g => {
+    const visibles = [...g.querySelectorAll('.toc-link')].filter(l => l.style.display !== 'none');
+    g.style.display = visibles.length ? '' : 'none';
+  });
+});
+// ══════════════════════════════════════════
+// Shared animation utilities
+// ══════════════════════════════════════════
+const A = {
+  // colors
+  bg:     '#1f201e',
+  border: 'rgba(255,255,255,0.07)',
+  gold:   '#c8a84b',
+  gold2:  '#a07e2e',
+  blue:   '#79b8d4',
+  green:  '#6aaa64',
+  purple: '#c586c0',
+  orange: '#e8905a',
+  text1:  '#e8e4d8',
+  text2:  '#a89e88',
+  text3:  '#5e5a52',
+  dim:    'rgba(255,255,255,0.04)',
+
+  // draw a rounded rect
+  roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+    if (fill)   { ctx.fillStyle = fill;   ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); }
+  },
+
+  // draw arrow from (x1,y1) to (x2,y2)
+  arrow(ctx, x1, y1, x2, y2, color, alpha=1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color; ctx.fillStyle = color;
+    ctx.lineWidth = 1.5;
+    const angle = Math.atan2(y2-y1, x2-x1);
+    const len = Math.hypot(x2-x1, y2-y1);
+    const hs = 8; // head size
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2 - Math.cos(angle)*hs, y2 - Math.sin(angle)*hs);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - Math.cos(angle-0.4)*hs, y2 - Math.sin(angle-0.4)*hs);
+    ctx.lineTo(x2 - Math.cos(angle+0.4)*hs, y2 - Math.sin(angle+0.4)*hs);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  },
+
+  // draw a node box
+  node(ctx, x, y, w, h, label, active, color) {
+    const c = color || (active ? A.gold : A.text3);
+    const bg = active ? 'rgba(200,168,75,0.12)' : A.dim;
+    A.roundRect(ctx, x-w/2, y-h/2, w, h, 4, bg, c);
+    ctx.fillStyle = active ? A.text1 : A.text3;
+    ctx.font = `${active?'500':'400'} 11px "IBM Plex Mono", monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y);
+  },
+
+  // draw a small dot packet moving along a path
+  packet(ctx, x, y, color, alpha=1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  },
+
+  lerp(a, b, t) { return a + (b-a)*t; },
+  easeInOut(t) { return t<0.5 ? 2*t*t : -1+(4-2*t)*t; },
+  clamp(t,a,b) { return Math.min(Math.max(t,a),b); },
+};
+
+// ══════════════════════════════════════════
+// FORK animation
+// ══════════════════════════════════════════
+const forkAnim = (() => {
+  const canvas = document.getElementById('canvas-fork');
+  if (!canvas) return { restart() {} };
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  let t = 0, raf = null, startTime = null;
+  const DUR = 3200; // ms
+
+  // nodes: [START] -> fork -> [B],[C],[D] -> [END] implied
+  const nodes = {
+    start: { x:70,  y:H/2, label:'[START]' },
+    fork:  { x:210, y:H/2, label:'fork' },
+    b:     { x:380, y:60,  label:'[B]' },
+    c:     { x:380, y:H/2, label:'[C]' },
+    d:     { x:380, y:H-60,label:'[D]' },
+  };
+  const branches = [
+    { node: nodes.b, color: A.blue,   label:'分支 1' },
+    { node: nodes.c, color: A.green,  label:'分支 2' },
+    { node: nodes.d, color: A.purple, label:'分支 3' },
+  ];
+
+  function draw(now) {
+    if (!startTime) startTime = now;
+    t = Math.min((now - startTime) / DUR, 1);
+    ctx.clearRect(0, 0, W, H);
+
+    // static arrows from fork to branches
+    branches.forEach(br => {
+      const alpha = A.clamp((t-0.3)/0.2, 0, 1);
+      A.arrow(ctx, nodes.fork.x+28, nodes.fork.y, br.node.x-28, br.node.y, br.color, alpha*0.4);
+    });
+    // arrow start -> fork
+    A.arrow(ctx, nodes.start.x+40, nodes.start.y, nodes.fork.x-28, nodes.fork.y, A.text3, 0.5);
+
+    // nodes
+    const forkActive = t > 0.2 && t < 0.55;
+    A.node(ctx, nodes.start.x, nodes.start.y, 80, 32, '[START]', t>0.05, A.gold);
+    A.node(ctx, nodes.fork.x,  nodes.fork.y,  56, 32, 'fork',   forkActive, A.orange);
+    branches.forEach(br => {
+      const a = A.clamp((t-0.45)/0.15, 0, 1);
+      A.node(ctx, br.node.x, br.node.y, 48, 28, br.node.label, a>0.5, br.color);
+    });
+
+    // moving packet: start -> fork
+    if (t < 0.35) {
+      const pt = A.clamp(t/0.25, 0, 1);
+      const px = A.lerp(nodes.start.x+40, nodes.fork.x-28, A.easeInOut(pt));
+      A.packet(ctx, px, nodes.start.y, A.gold);
+    }
+
+    // three packets fork -> branches
+    if (t >= 0.35 && t < 0.85) {
+      branches.forEach((br, i) => {
+        const delay = i * 0;
+        const pt = A.clamp((t - 0.35 - delay) / 0.38, 0, 1);
+        if (pt > 0) {
+          const px = A.lerp(nodes.fork.x+28, br.node.x-28, A.easeInOut(pt));
+          const py = A.lerp(nodes.fork.y, br.node.y, A.easeInOut(pt));
+          A.packet(ctx, px, py, br.color);
+        }
+      });
+    }
+
+    // label "并发执行"
+    if (t > 0.6) {
+      const alpha = A.clamp((t-0.6)/0.15, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.fillStyle = A.text2;
+      ctx.font = '11px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('← 同时并发，无先后顺序 →', W-130, H/2);
+      ctx.restore();
+    }
+
+    if (t < 1) raf = requestAnimationFrame(draw);
+    else {
+      // hold final state
+      branches.forEach(br => {
+        A.node(ctx, br.node.x, br.node.y, 48, 28, br.node.label, true, br.color);
+      });
+    }
+  }
+
+  function start() {
+    if (raf) cancelAnimationFrame(raf);
+    startTime = null; t = 0;
+    raf = requestAnimationFrame(draw);
+  }
+
+  // auto-start when visible
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { start(); obs.disconnect(); }
+  }, { threshold: 0.3 });
+  obs.observe(canvas);
+
+  return { restart: start };
+})();
+
+// ══════════════════════════════════════════
+// FOR animation
+// ══════════════════════════════════════════
+const forAnim = (() => {
+  const canvas = document.getElementById('canvas-for');
+  if (!canvas) return { restart() {} };
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  let startTime = null, raf = null;
+  const ITEMS = ['@p1','@p2','@p3'];
+  const DUR = 4200;
+
+  const nd = {
+    pre:  { x:60,  y:H/2, label:'[B]' },
+    c:    { x:220, y:H/2, label:'[C]' },
+    d:    { x:370, y:H/2, label:'[D]' },
+    end:  { x:560, y:H/2, label:'[END]' },
+  };
+
+  function draw(now) {
+    if (!startTime) startTime = now;
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / DUR, 1);
+    ctx.clearRect(0, 0, W, H);
+
+    // static structure
+    A.arrow(ctx, nd.pre.x+28, nd.pre.y, nd.c.x-28, nd.c.y, A.text3, 0.35);
+    A.arrow(ctx, nd.c.x+28,  nd.c.y,   nd.d.x-28, nd.d.y, A.text3, 0.35);
+    A.arrow(ctx, nd.d.x+28,  nd.d.y,   nd.end.x-40, nd.end.y, A.text3, 0.35);
+
+    // back-loop arrow (curved hint)
+    ctx.save();
+    ctx.setLineDash([3,4]);
+    ctx.strokeStyle = A.gold2; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(nd.d.x, nd.d.y+14);
+    ctx.bezierCurveTo(nd.d.x, nd.d.y+48, nd.c.x, nd.d.y+48, nd.c.x, nd.c.y+14);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    A.node(ctx, nd.pre.x, nd.pre.y, 48, 28, '[B]',    true,  A.text3);
+    A.node(ctx, nd.c.x,   nd.c.y,   48, 28, '[C]',    false, A.text3);
+    A.node(ctx, nd.d.x,   nd.d.y,   48, 28, '[D]',    false, A.text3);
+    A.node(ctx, nd.end.x, nd.end.y, 56, 28, '[END]',  false, A.text3);
+
+    // iterations
+    const iterDur = 0.26;
+    const iterStart = 0.08;
+    ITEMS.forEach((item, i) => {
+      const it0 = iterStart + i * iterDur;
+      const it1 = it0 + iterDur;
+      if (t < it0) return;
+      const it = A.clamp((t - it0) / iterDur, 0, 1);
+
+      // highlight C then D
+      const atC = it < 0.45;
+      const atD = it >= 0.45 && it < 0.85;
+      if (atC) A.node(ctx, nd.c.x, nd.c.y, 48, 28, '[C]', true, A.blue);
+      if (atD) A.node(ctx, nd.d.x, nd.d.y, 48, 28, '[D]', true, A.blue);
+
+      // packet
+      let px, py;
+      if (it < 0.45) {
+        const pt = it / 0.45;
+        px = A.lerp(nd.c.x-24, nd.c.x+24, pt);
+        py = nd.c.y;
+      } else if (it < 0.85) {
+        const pt = (it-0.45)/0.4;
+        px = A.lerp(nd.d.x-24, nd.d.x+24, pt);
+        py = nd.d.y;
+      } else {
+        const isLast = i === ITEMS.length-1;
+        if (isLast) {
+          const pt = (it-0.85)/0.15;
+          px = A.lerp(nd.d.x+24, nd.end.x-28, pt);
+          py = nd.end.y;
+        } else {
+          // loop back (along curve)
+          const pt = (it-0.85)/0.15;
+          px = A.lerp(nd.d.x, nd.c.x, pt);
+          py = nd.d.y + Math.sin(pt*Math.PI)*34;
+        }
+      }
+      A.packet(ctx, px, py, A.blue);
+
+      // label which iteration
+      ctx.save();
+      ctx.fillStyle = A.text2; ctx.globalAlpha = 0.8;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`轮 ${i+1}：${item}`, 10, 18 + i*16);
+      ctx.restore();
+    });
+
+    // done
+    if (t > iterStart + ITEMS.length * iterDur) {
+      A.node(ctx, nd.end.x, nd.end.y, 56, 28, '[END]', true, A.gold);
+      ctx.save();
+      ctx.fillStyle = A.gold; ctx.globalAlpha = 0.7;
+      ctx.font = '11px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('循环完毕 →', nd.end.x, nd.end.y + 28);
+      ctx.restore();
+    }
+
+    if (t < 1) raf = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (raf) cancelAnimationFrame(raf);
+    startTime = null;
+    raf = requestAnimationFrame(draw);
+  }
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { start(); obs.disconnect(); }
+  }, { threshold: 0.3 });
+  obs.observe(canvas);
+  return { restart: start };
+})();
+
+// ══════════════════════════════════════════
+// PAR animation
+// ══════════════════════════════════════════
+const parAnim = (() => {
+  const canvas = document.getElementById('canvas-par');
+  if (!canvas) return { restart() {} };
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  let startTime = null, raf = null;
+  const DUR = 4000;
+
+  const WORKERS = [
+    { label:'@coder1', color: A.blue   },
+    { label:'@coder2', color: A.green  },
+    { label:'@coder3', color: A.purple },
+  ];
+  const rowH = H / (WORKERS.length + 1);
+  const preX = 70, writeX = 240, tryX = 390, endX = 560;
+
+  function draw(now) {
+    if (!startTime) startTime = now;
+    const t = Math.min((now - startTime) / DUR, 1);
+    ctx.clearRect(0, 0, W, H);
+
+    // Pre node
+    const preY = H/2;
+    A.node(ctx, preX, preY, 56, 28, '[START]', t>0.05, A.gold);
+
+    // fan-out arrows
+    WORKERS.forEach((w, i) => {
+      const y = (i+1) * rowH;
+      const alpha = A.clamp((t-0.15)/0.15, 0, 1);
+      A.arrow(ctx, preX+28, preY, writeX-28, y, w.color, alpha*0.35);
+    });
+
+    // per-worker lanes
+    WORKERS.forEach((w, i) => {
+      const y = (i+1) * rowH;
+      const delay = 0; // all start simultaneously
+      const lt = A.clamp((t - 0.22) / 0.65, 0, 1);
+
+      // static lane arrows
+      A.arrow(ctx, writeX+28, y, tryX-28, y, A.text3, 0.25);
+
+      // nodes
+      const atWrite = lt > 0 && lt < 0.5;
+      const atTry   = lt >= 0.5 && lt < 0.95;
+      const done    = lt >= 0.95;
+      A.node(ctx, writeX, y, 64, 26, 'write', atWrite, w.color);
+      A.node(ctx, tryX,   y, 64, 26, 'try',   atTry,   w.color);
+
+      // packet
+      if (lt > 0 && lt < 1) {
+        let px, py = y;
+        if (lt < 0.5) {
+          px = A.lerp(writeX-32, writeX+32, lt/0.5);
+        } else {
+          px = A.lerp(tryX-32, tryX+32, (lt-0.5)/0.45);
+        }
+        A.packet(ctx, px, py, w.color);
+      }
+
+      // worker label
+      ctx.save();
+      ctx.fillStyle = w.color; ctx.globalAlpha = 0.75;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(w.label, writeX-36, y+1);
+      ctx.restore();
+
+      // done arrow to END
+      if (done) {
+        const pt = A.clamp((lt-0.95)/0.05, 0, 1);
+        A.arrow(ctx, tryX+32, y, endX-28, preY, w.color, pt*0.5);
+      }
+    });
+
+    // end node
+    const allDone = A.clamp((t-0.9)/0.1, 0, 1);
+    A.node(ctx, endX, preY, 56, 28, '[D]', allDone>0.5, A.gold);
+    if (allDone > 0.5) {
+      ctx.save();
+      ctx.fillStyle = A.gold; ctx.globalAlpha = allDone * 0.7;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('全部汇合', endX, preY+26);
+      ctx.restore();
+    }
+
+    if (t < 1) raf = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (raf) cancelAnimationFrame(raf);
+    startTime = null;
+    raf = requestAnimationFrame(draw);
+  }
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { start(); obs.disconnect(); }
+  }, { threshold: 0.3 });
+  obs.observe(canvas);
+  return { restart: start };
+})();
+</script>
+</body>
+</html>

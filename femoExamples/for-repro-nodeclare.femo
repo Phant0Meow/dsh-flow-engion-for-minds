@@ -1,0 +1,23 @@
+meta:
+  name = for-repro-nodeclare
+  session = new
+
+vars:
+  alive_party = [@knight, @mage, @rogue, @player]
+  count = 0
+
+actors:
+  ai @knight = soul:2
+  ai @mage = soul:3
+  ai @rogue = soul:4
+  human @player = soul:9, source:0
+
+action mark @assign:
+  out:
+    count += 1
+
+mainflow:
+  [START] -> for @hero in alive_party:
+    -> if (@hero.type == ai) -> [L]:mark ->
+    -> if (@hero.type == human) -> [LP]:mark ->
+  -> [END]

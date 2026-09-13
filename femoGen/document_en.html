@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Femo Syntax Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #111210;
+  --bg2:       #181917;
+  --bg3:       #1f201e;
+  --bg4:       #252624;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
+  --gold:      #c8a84b;
+  --gold2:     #a07e2e;
+  --gold-bg:   rgba(200,168,75,0.08);
+  --green:     #6aaa64;
+  --blue:      #79b8d4;
+  --purple:    #c586c0;
+  --orange:    #e8905a;
+  --red:       #d06060;
+  --text1:     #e8e4d8;
+  --text2:     #a89e88;
+  --text3:     #5e5a52;
+  --sidebar-w: 272px;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; font-size: 15px; }
+
+body {
+  background: var(--bg);
+  color: var(--text1);
+  font-family: var(--sans);
+  line-height: 1.7;
+  display: flex;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ─── Sidebar ─── */
+#sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  z-index: 50;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 1.6rem 1.4rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: var(--mono); font-size: 0.85rem; font-weight: 500;
+  color: var(--gold); letter-spacing: 0.08em;
+}
+.sidebar-sub {
+  font-size: 0.7rem; color: var(--text3); margin-top: 0.25rem;
+  font-family: var(--mono);
+}
+
+.sidebar-search {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-search input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text1); padding: 0.45rem 0.7rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  outline: none; border-radius: 3px;
+  transition: border-color 0.2s;
+}
+.sidebar-search input:focus { border-color: var(--gold2); }
+.sidebar-search input::placeholder { color: var(--text3); }
+
+nav#toc {
+  padding: 0.8rem 0; flex: 1;
+  overflow-y: auto;
+}
+.toc-group { margin-bottom: 0.3rem; }
+.toc-group-label {
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em;
+  color: var(--text3); text-transform: uppercase;
+  padding: 0.5rem 1.4rem 0.3rem;
+}
+.toc-link {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.38rem 1.4rem; font-size: 0.78rem; color: var(--text2);
+  text-decoration: none; transition: color 0.15s, background 0.15s;
+  border-left: 2px solid transparent; cursor: pointer;
+}
+.toc-link:hover { color: var(--text1); background: var(--bg3); }
+.toc-link.active { color: var(--gold); border-left-color: var(--gold); background: var(--gold-bg); }
+.toc-link .toc-num {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text3);
+  min-width: 1.6em; flex-shrink: 0;
+}
+.toc-sub { padding-left: 3.2rem; font-size: 0.73rem; }
+
+/* ─── Main ─── */
+#main {
+  margin-left: var(--sidebar-w);
+  flex: 1; min-width: 0;
+  padding: 0 0 6rem;
+}
+
+/* ─── Top bar ─── */
+#topbar {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(17,18,16,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 3rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar-path {
+  font-family: var(--mono); font-size: 0.72rem; color: var(--text3);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.topbar-path span { color: var(--text2); }
+.topbar-actions { display: flex; gap: 0.8rem; }
+.topbar-btn {
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em;
+  color: var(--text3); padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border2); background: transparent;
+  cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  text-decoration: none; display: inline-block;
+}
+.topbar-btn:hover { color: var(--text1); border-color: var(--text3); }
+
+/* ─── Content ─── */
+#content {
+  max-width: 880px;
+  padding: 3rem 3rem 0;
+}
+
+/* ─── Doc sections ─── */
+.doc-section {
+  margin-bottom: 4.5rem;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.doc-section.visible { opacity: 1; transform: translateY(0); }
+
+.section-anchor { display: block; height: 80px; margin-top: -80px; visibility: hidden; }
+
+.section-header {
+  display: flex; align-items: baseline; gap: 0.8rem;
+  margin-bottom: 1.4rem; padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.section-num {
+  font-family: var(--mono); font-size: 0.65rem; color: var(--text3);
+  letter-spacing: 0.1em; padding-top: 0.15rem;
+}
+.section-title {
+  font-size: 1.25rem; font-weight: 600; color: var(--text1);
+  letter-spacing: -0.01em;
+}
+.section-badge {
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em;
+  text-transform: uppercase; padding: 0.15rem 0.5rem;
+  border: 1px solid; border-radius: 2px; margin-left: auto;
+  white-space: nowrap;
+}
+.badge-core   { color: var(--gold);  border-color: var(--gold2); }
+.badge-flow   { color: var(--blue);  border-color: #4a7a90; }
+.badge-adv    { color: var(--purple);border-color: #7a4a80; }
+.badge-debug  { color: var(--red);   border-color: #8a3a3a; }
+
+/* ─── Prose ─── */
+p { color: var(--text2); margin-bottom: 1rem; line-height: 1.85; }
+p strong { color: var(--text1); font-weight: 500; }
+p em { color: var(--gold); font-style: normal; }
+
+ul, ol { color: var(--text2); padding-left: 1.4rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.35rem; line-height: 1.75; }
+li strong { color: var(--text1); }
+li code { font-family: var(--mono); font-size: 0.82em; color: var(--blue); 
+  background: rgba(121,184,212,0.1); padding: 0.1em 0.35em; border-radius: 2px; }
+
+/* ─── Callout boxes ─── */
+.callout {
+  display: flex; gap: 0.8rem; align-items: flex-start;
+  padding: 0.9rem 1.1rem; border-radius: 3px;
+  margin: 1.2rem 0; border-left: 3px solid;
+}
+.callout-icon { font-size: 0.9rem; flex-shrink: 0; padding-top: 0.1rem; }
+.callout-body { font-size: 0.85rem; color: var(--text2); line-height: 1.75; }
+.callout-body strong { color: var(--text1); }
+.callout-body code { font-family: var(--mono); font-size: 0.8em; color: inherit; 
+  background: rgba(255,255,255,0.06); padding: 0.1em 0.3em; border-radius: 2px; }
+.callout.tip    { background: rgba(106,170,100,0.06); border-color: var(--green); }
+.callout.warn   { background: rgba(200,168,75,0.06);  border-color: var(--gold); }
+.callout.danger { background: rgba(208,96,96,0.06);   border-color: var(--red); }
+.callout.info   { background: rgba(121,184,212,0.06); border-color: var(--blue); }
+
+/* ─── Code blocks ─── */
+.code-block {
+  position: relative; margin: 1.4rem 0;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; overflow: hidden;
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 1rem; background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+}
+.code-lang {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--text3);
+}
+.code-copy {
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text3);
+  cursor: pointer; transition: color 0.15s; background: none; border: none;
+  padding: 0.15rem 0.4rem; letter-spacing: 0.05em;
+}
+.code-copy:hover { color: var(--gold); }
+.code-copy.copied { color: var(--green); }
+pre {
+  padding: 1.1rem 1.2rem; overflow-x: auto;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.85;
+  color: var(--text2);
+}
+/* Syntax tokens */
+.k  { color: var(--orange); }
+.at { color: var(--gold); }
+.s  { color: var(--green); }
+.c  { color: var(--text3); font-style: italic; }
+.v  { color: var(--blue); }
+.p  { color: var(--purple); }
+.n  { color: var(--text1); }
+.f  { color: var(--text1); }
+
+/* ─── Table ─── */
+.table-wrap {
+  overflow-x: auto; margin: 1.2rem 0;
+  border: 1px solid var(--border); border-radius: 4px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+th {
+  background: var(--bg4); color: var(--text2);
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em;
+  text-transform: uppercase; font-weight: 500;
+  padding: 0.6rem 1rem; text-align: left;
+  border-bottom: 1px solid var(--border2);
+}
+td {
+  padding: 0.6rem 1rem; color: var(--text2);
+  border-bottom: 1px solid var(--border); vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+td code, th code {
+  font-family: var(--mono); font-size: 0.8em; color: var(--blue);
+  background: rgba(121,184,212,0.1); padding: 0.1em 0.3em; border-radius: 2px;
+}
+td strong { color: var(--text1); }
+
+/* ─── Def grid ─── */
+.def-grid {
+  display: grid; grid-template-columns: auto 1fr;
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; margin: 1.2rem 0;
+}
+.def-term {
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 500;
+  color: var(--gold); padding: 0.6rem 1rem;
+  background: var(--bg4); border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.def-desc {
+  font-size: 0.83rem; color: var(--text2); padding: 0.6rem 1rem;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  line-height: 1.65;
+}
+.def-term:last-of-type, .def-desc:last-of-type { border-bottom: none; }
+.def-desc code {
+  font-family: var(--mono); font-size: 0.8em; color: var(--blue);
+  background: rgba(121,184,212,0.1); padding: 0.1em 0.3em; border-radius: 2px;
+}
+
+/* ─── Sub-section heading ─── */
+h3.sub {
+  font-size: 1rem; font-weight: 600; color: var(--text1);
+  margin: 2.2rem 0 0.8rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+h3.sub::before {
+  content: ''; display: inline-block;
+  width: 3px; height: 1em;
+  background: var(--gold); border-radius: 1px;
+}
+h4.sub2 {
+  font-size: 0.9rem; font-weight: 500; color: var(--text2);
+  margin: 1.6rem 0 0.6rem; letter-spacing: 0.01em;
+}
+
+/* ─── Highlight ─── */
+.hl { color: var(--gold); font-family: var(--mono); font-size: 0.85em;
+  background: var(--gold-bg); padding: 0.1em 0.35em; border-radius: 2px; }
+
+/* ─── Two-col ─── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+.two-col .code-block { margin: 0; }
+
+/* ─── Divider ─── */
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* ─── Anchor link ─── */
+a { color: var(--gold); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ─── Progress bar ─── */
+#progress {
+  position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+  height: 2px; background: transparent; z-index: 100;
+}
+#progress-bar {
+  height: 100%; background: var(--gold); width: 0;
+  transition: width 0.1s linear;
+}
+
+/* ─── Mobile toggle ─── */
+#menu-toggle {
+  display: none; position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--gold); color: var(--bg); border: none;
+  width: 44px; height: 44px; border-radius: 50%;
+  font-size: 1.1rem; cursor: pointer; z-index: 200;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  #main { margin-left: 0; }
+  #progress { left: 0; }
+  #content { padding: 2rem 1.2rem 0; }
+  #topbar { padding: 0.7rem 1.2rem; }
+  .two-col { grid-template-columns: 1fr; }
+  #menu-toggle { display: flex; align-items: center; justify-content: center; }
+}
+
+/* ─── Animation ─── */
+.anim-wrap {
+  margin: 1.4rem 0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  padding: 1.2rem 1rem 0.8rem;
+}
+.anim-wrap canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.anim-controls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 0.2rem 0;
+}
+.anim-btn {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  background: none;
+  border: 1px solid var(--border2);
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.anim-btn:hover { color: var(--gold); border-color: var(--gold2); }
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="progress"><div id="progress-bar"></div></div>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">Femo Docs</div>
+    <div class="sidebar-sub">Syntax Reference · v1.0</div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="search-input" placeholder="Search docs…" autocomplete="off">
+  </div>
+  <nav id="toc">
+    <div class="toc-group">
+      <div class="toc-group-label">Getting Started</div>
+      <a class="toc-link" href="#s-overview"><span class="toc-num">00</span>Overview &amp; Design Philosophy</a>
+      <a class="toc-link" href="#s-structure"><span class="toc-num">01</span>File Structure</a>
+      <a class="toc-link" href="#s-conventions"><span class="toc-num">02</span>Conventions &amp; Symbols</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">Core Syntax</div>
+      <a class="toc-link" href="#s-meta"><span class="toc-num">03</span>meta — Script Metadata</a>
+      <a class="toc-link" href="#s-vars"><span class="toc-num">04</span>vars — Variable Pool</a>
+      <a class="toc-link" href="#s-actors"><span class="toc-num">05</span>actors — Role Definitions</a>
+      <a class="toc-link" href="#s-code"><span class="toc-num">06</span>code — External Modules</a>
+      <a class="toc-link" href="#s-memory"><span class="toc-num">07</span>memory &amp; context</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">Actions</div>
+      <a class="toc-link" href="#s-action-ai"><span class="toc-num">08</span>AI Action @ai</a>
+      <a class="toc-link" href="#s-action-human"><span class="toc-num">09</span>Human Action @human</a>
+      <a class="toc-link" href="#s-action-assign"><span class="toc-num">10</span>Assignment Action @assign</a>
+      <a class="toc-link" href="#s-action-func"><span class="toc-num">11</span>Function Call @func</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">Flow Orchestration</div>
+      <a class="toc-link" href="#s-flow-basic"><span class="toc-num">12</span>Basic Chain Flow</a>
+      <a class="toc-link" href="#s-flow-fork"><span class="toc-num">13</span>Concurrent Fork</a>
+      <a class="toc-link" href="#s-flow-join"><span class="toc-num">14</span>Merge with Join</a>
+      <a class="toc-link" href="#s-flow-for"><span class="toc-num">15</span>Sequential Loop — for</a>
+      <a class="toc-link" href="#s-flow-par"><span class="toc-num">16</span>Parallel Loop — par</a>
+      <a class="toc-link" href="#s-modules"><span class="toc-num">17</span>Modules</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">Advanced &amp; Debug</div>
+      <a class="toc-link" href="#s-scope"><span class="toc-num">18</span>scope — Perspective Isolation</a>
+      <a class="toc-link" href="#s-actor-system"><span class="toc-num">19</span>@actor Type System</a>
+      <a class="toc-link" href="#s-setvariable"><span class="toc-num">20</span>AI Variable Assignment Signal</a>
+      <a class="toc-link" href="#s-debug"><span class="toc-num">21</span>Debug Guide</a>
+      <a class="toc-link" href="#s-example"><span class="toc-num">22</span>Complete Example</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">Developer Reference</div>
+      <a class="toc-link" href="#s-blocks"><span class="toc-num">23</span>Prompt Block Collection</a>
+      <a class="toc-link" href="#s-session"><span class="toc-num">24</span>Session &amp; Turn Management</a>
+      <a class="toc-link" href="#s-storage"><span class="toc-num">25</span>Dialog Storage Rules</a>
+      <a class="toc-link" href="#s-db"><span class="toc-num">26</span>Database Schema</a>
+      <a class="toc-link" href="#s-engine"><span class="toc-num">27</span>Async Engine Architecture</a>
+      <a class="toc-link" href="#s-runtime"><span class="toc-num">28</span>Runtime Integration</a>
+      <a class="toc-link" href="#s-devguide"><span class="toc-num">29</span>Tuning &amp; Extension Guide</a>
+      <a class="toc-link" href="#s-engineapi"><span class="toc-num">30</span>AsyncEngine API Reference</a>
+    </div>
+  </nav>
+</aside>
+
+<!-- Main -->
+<main id="main">
+  <div id="topbar">
+    <div class="topbar-path">
+      <span>femo</span> / <span>docs</span> / <span style="color:var(--text1)">syntax reference</span>
+    </div>
+    <div class="topbar-actions">
+      <a href="femo.html" class="topbar-btn">← Project Overview</a>
+      <a href="https://github.com/Phant0Meow/Femo" class="topbar-btn" target="_blank">GitHub ↗</a>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ─── 00 Overview ─── -->
+    <div class="doc-section" id="sec-overview">
+      <span class="section-anchor" id="s-overview"></span>
+      <div class="section-header">
+        <span class="section-num">00</span>
+        <h2 class="section-title">Overview &amp; Design Philosophy</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+
+      <p><strong>Femo (Flow Engine for Minds · Work Automata)</strong> is a DSL (Domain-Specific Language) and compiler for orchestrating multi-agent workflows. Its core idea: <em>describe AI collaboration the way you write a screenplay</em>.</p>
+
+      <div class="callout tip">
+        <span class="callout-icon">🖱️</span>
+        <div class="callout-body">New users: start with the visual editor at <a href="http://femo.net" target="_blank">femo.net</a>. It supports drag-and-drop flow building — advanced constructs like <code>for</code> and <code>par</code> have visual equivalents too. No code required. Come back here once you want to understand the syntax in depth.</div>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>Three core principles</strong> — understand these and you understand Femo:<br>
+        ① <strong>Scope = Space</strong>: only actors sharing a scope share context — perspective isolation is built-in;<br>
+        ② <strong>Vars = Flow Control</strong>: variables aren't for passing messages — they drive flow direction;<br>
+        ③ <strong>Context is not a variable</strong>: LLMs communicate through shared context, not explicit parameters.</div>
+      </div>
+
+      <p>Femo files use the extension <span class="hl">.femo</span> (the <em>s</em> stands for <em>script</em>). The compiler reads a .femo file, parses the script, and drives agent collaboration according to the rules defined within.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">📖</span>
+        <div class="callout-body">This document describes Femo v1.0 compiler behavior. Features marked <strong>TODO / Not yet implemented</strong> are noted — please read carefully.</div>
+      </div>
+    </div>
+
+    <!-- ─── 01 Structure ─── -->
+    <div class="doc-section" id="sec-structure">
+      <span class="section-anchor" id="s-structure"></span>
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">File Structure</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>A .femo script is organized in the following order. All blocks are optional except <span class="hl">mainflow</span>, which is required:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · overall structure</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">meta</span>:       <span class="c"># Script metadata</span>
+<span class="k">vars</span>:       <span class="c"># Optional · global state variable pool · must be declared before use</span>
+<span class="k">code</span>:       <span class="c"># Optional · external Python module imports · required for @func</span>
+<span class="k">actors</span>:     <span class="c"># Recommended · role definitions · AI has no persona if omitted</span>
+<span class="k">memory</span>:     <span class="c"># Optional · memory retrieval method definitions</span>
+<span class="k">context</span>:    <span class="c"># Optional · context extraction method definitions</span>
+<span class="k">action</span> ...: <span class="c"># Required · action definitions · at least one, can be many</span>
+<span class="k">module</span> ...: <span class="c"># Optional · module definitions · can be many</span>
+<span class="k">mainflow</span>:   <span class="c"># Required · main flow orchestration</span></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>Indentation-sensitive</strong>: indentation expresses ownership, similar to Python. <strong>Newline-sensitive</strong>: flow control constructs like <code>fork</code>, <code>for</code>, and <code>par</code> must follow strict indentation and newline rules — the parser will error otherwise.</div>
+      </div>
+    </div>
+
+    <!-- ─── 02 Conventions ─── -->
+    <div class="doc-section" id="sec-conventions">
+      <span class="section-anchor" id="s-conventions"></span>
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">Conventions &amp; Symbol Reference</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+
+      <ul>
+        <li><strong>Case-sensitive</strong>: variable names and action names are case-sensitive</li>
+        <li><strong>Comments</strong>: use <span class="hl">#</span> or <span class="hl">//</span> inline</li>
+        <li><strong>@ symbol</strong>: actor entity names always carry <span class="hl">@</span> — in definitions, references, and parameter passing</li>
+        <li><strong>File paths</strong>: must use <span class="hl">file:"path/to/file"</span> format; bare text is treated as a string literal</li>
+        <li><strong>Multi-line text</strong>: use <span class="hl">|</span> followed by an indented newline for multi-line string literals</li>
+      </ul>
+
+      <h3 class="sub">Core Symbols</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Symbol</th><th>Meaning</th><th>Example</th></tr>
+          <tr><td><code>action</code></td><td>Define an action (like Python's <code>def</code>)</td><td><code>action wolf_kill @ai(@wolf):</code></td></tr>
+          <tr><td><code>@</code></td><td>Reference / point to an Actor entity</td><td><code>@wolfClaire</code>, <code>@ellis.type</code></td></tr>
+          <tr><td><code>[]</code></td><td>Flow node position marker</td><td><code>[A]</code>, <code>[START]</code>, <code>[END]</code></td></tr>
+          <tr><td><code>{}</code></td><td>Variable interpolation (prompt f-string)</td><td><code>alive_players</code></td></tr>
+          <tr><td><code>&lt;&lt;&gt;&gt;</code></td><td>AI output assignment signal</td><td><code>SET VARIABLE: &lt;&lt;@VOTE = @player3&gt;&gt;</code></td></tr>
+          <tr><td><code>&amp;</code></td><td>Reference a Module (black-box)</td><td><code>&amp;CoderSandbox(arg)</code></td></tr>
+          <tr><td><code>-&gt;</code></td><td>Flow connection direction</td><td><code>[A] -&gt; [B]</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── 03 meta ─── -->
+    <div class="doc-section" id="sec-meta">
+      <span class="section-anchor" id="s-meta"></span>
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">meta — Script Metadata</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>Defines the script's basic properties and runtime environment.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">meta</span>:
+    <span class="f">name</span>     = <span class="s">"My Werewolf Game"</span>
+    <span class="f">version</span>  = <span class="v">1.0</span>
+    <span class="f">owner</span>    = [<span class="v">1</span>, <span class="v">2</span>]
+    <span class="f">database</span> = file:<span class="s">"werewolf.db"</span>
+    <span class="f">session</span>  = <span class="k">new</span>           <span class="c"># or specify an integer session_id</span>
+    <span class="f">system_safety</span> = <span class="v">|</span>
+        No database deletion. No harmful content generation.
+    <span class="f">output_style</span> = <span class="s">"Keep replies concise and professional."</span></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          <tr><td><code>name</code></td><td>text</td><td>Script name, written to the database when a new session is created</td></tr>
+          <tr><td><code>owner</code></td><td>integer array</td><td>Owner user_ids; the compiler auto-injects user info into context</td></tr>
+          <tr><td><code>database</code></td><td>file path</td><td>SQLite database path; defaults to <code>./chronica.wor</code> if not specified</td></tr>
+          <tr><td><code>session</code></td><td>integer / <code>new</code></td><td><code>new</code> creates a new session automatically; a number loads an existing one; <code>17/new</code> is also valid</td></tr>
+          <tr><td><code>system_safety</code></td><td>text / file path</td><td>Safety policy injected into all actors' context automatically</td></tr>
+          <tr><td><code>output_style</code></td><td>text / file path</td><td>Output quality guidelines, auto-injected into context</td></tr>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body"><code>session = 17 / new</code> means: load session 17 if it already exists; if you happen to be creating it fresh and it becomes 17, create it automatically; otherwise the backend will ask whether to proceed.</div>
+      </div>
+    </div>
+
+    <!-- ─── 04 vars ─── -->
+    <div class="doc-section" id="sec-vars">
+      <span class="section-anchor" id="s-vars"></span>
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">vars — Global Variable Pool</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>All global state variables are declared here. <em>Variables must be declared before use</em> — directly assigning an undeclared variable causes an error.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">vars</span>:
+    turn_count      = <span class="v">1</span>
+    game_over       = <span class="v">false</span>
+    alive_players   = [<span class="at">@seer</span>, <span class="at">@wolf</span>]        <span class="c"># @actor array</span>
+    agent_locations = {<span class="at">@ellis</span>: <span class="s">"bedroom"</span>, <span class="at">@bob</span>: <span class="s">"park"</span>}  <span class="c"># dict</span>
+    <span class="at">@speaker</span>        = <span class="s">""</span>                  <span class="c"># @actor-type variable, empty value is ""</span>
+    hp              = {<span class="at">@wolf</span>: <span class="v">100</span>, <span class="at">@seer</span>: <span class="v">100</span>}</pre>
+      </div>
+
+      <h3 class="sub">Key Points</h3>
+      <ul>
+        <li><strong>@actor-type variables</strong>: variable name must start with <span class="hl">@</span>, e.g. <code>@speaker</code>, to be recognized as an actor type</li>
+        <li><strong>@actor dual-perspective access</strong>: <code>hp.@wolf</code> and <code>@wolf.hp</code> are fully equivalent (see section 19)</li>
+        <li><strong>Dictionary default</strong>: using <code>{dict[key]}</code> in a prompt where the key doesn't exist resolves to an empty string — no error</li>
+      </ul>
+    </div>
+
+    <!-- ─── 05 actors ─── -->
+    <div class="doc-section" id="sec-actors">
+      <span class="section-anchor" id="s-actors"></span>
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2 class="section-title">actors — Role Definitions</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>Uses a strong-typed declaration style: <span class="hl">type @name = attributes</span>.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">actors</span>:
+    ai <span class="at">@hostgod</span> = soul:<span class="v">0</span>, source:<span class="v">deepseek</span>
+    ai <span class="at">@wolf</span>    = soul:<span class="v">1</span>, source:<span class="v">glm5.1</span>, tools:[<span class="v">deep_think</span>]
+    ai <span class="at">@seer</span>    = soul:<span class="v">2</span>, source:<span class="v">glm5</span>
+    human <span class="at">@player</span> = soul:<span class="v">9</span>, source:<span class="v">0</span>  <span class="c"># source:0 = human user without admin perspective</span></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Field</th><th>Description</th></tr>
+          <tr><td><code>soul:ID</code></td><td>Unique soul ID, mapped to the database <code>souls</code> table; the compiler extracts the system prompt automatically</td></tr>
+          <tr><td><code>source:model</code></td><td>For AI: the model name; for humans: the numeric user ID; omit for random assignment</td></tr>
+          <tr><td><code>source:0</code></td><td>Special value: a human user without admin perspective — only sees through the soul's viewpoint (ideal for Werewolf-style players)</td></tr>
+          <tr><td><code>tools:[...]</code></td><td>Attached tool list, e.g. <code>web_search</code>, <code>deep_think</code></td></tr>
+        </table>
+      </div>
+
+      <div class="callout danger">
+        <span class="callout-icon">🚫</span>
+        <div class="callout-body"><strong>Actor entity names always carry @</strong> and must never be stripped: in definitions <code>ai @ellis = ...</code>, in references <code>@ai(@ellis)</code>, in variable passing <code>@speaker = @ellis</code>. The <code>@</code> is part of the variable name — without it the actor type cannot be recognized.</div>
+      </div>
+    </div>
+
+    <!-- ─── 06 code ─── -->
+    <div class="doc-section" id="sec-code">
+      <span class="section-anchor" id="s-code"></span>
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2 class="section-title">code — External Python Modules</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>Import Python files for use by <span class="hl">@func</span> and <span class="hl">resolve</span>. Paths must use the <span class="hl">file:"..."</span> format. <strong>Absolute paths are preferred</strong>; a relative path like <span class="hl">file:"wait.py"</span> resolves to <span class="hl">/Users/{user_name}/Femo/func_code/wait.py</span>.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">code</span>:
+    game_logic = file:<span class="s">"utils/game.py"</span>
+    dev_ops    = file:<span class="s">"utils/deploy.py"</span>
+    memfile    = file:<span class="s">"femoBridges/MemoryExample.py"</span></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">The following are <strong>reserved keywords</strong> and cannot be used as code aliases: <code>meta</code>, <code>vars</code>, <code>code</code>, <code>actors</code>, <code>action</code>, <code>module</code>, <code>flow</code>, <code>mainflow</code>, <code>memory</code>, <code>context</code></div>
+      </div>
+    </div>
+
+    <!-- ─── 07 memory context ─── -->
+    <div class="doc-section" id="sec-memory">
+      <span class="section-anchor" id="s-memory"></span>
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2 class="section-title">memory &amp; context Definitions</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p><strong>memory</strong> and <strong>context</strong> methods define how AI actors receive memory and conversational history. They live at the same level as actions and modules.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · definition syntax</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">memory</span> rag10(memfile.retrieve_example):
+    <span class="f">in</span>: prompt, session_id, <span class="at">@actor</span>
+    <span class="f">out</span>: memory_text
+
+<span class="k">context</span> thisSession(ctxfile.findThisSession):
+    <span class="f">in</span>: session, <span class="at">@actor</span>
+    <span class="f">out</span>: context_text</pre>
+      </div>
+
+      <h3 class="sub">Reserved in Parameters</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Field</th><th>Value Passed</th></tr>
+          <tr><td><code>prompt</code></td><td>The current action's prompt after variable substitution</td></tr>
+          <tr><td><code>@actor</code></td><td>The current speaker's actor_info dict (Python-side param name auto-maps to <code>actor_info</code>)</td></tr>
+          <tr><td><code>session</code> / <code>session_id</code></td><td>The current session ID</td></tr>
+          <tr><td><code>turn</code> / <code>turn_id</code></td><td>The current turn ID</td></tr>
+          <tr><td>Any other name</td><td>Fetched from global vars by the same name</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Referencing in an Action</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> speak <span class="at">@ai</span>(<span class="at">@ellis</span>):
+    prompt: <span class="s">"Hello"</span>
+    <span class="f">memory</span>:  rag10        <span class="c"># omit to use the first memory method, or the built-in default</span>
+    <span class="f">context</span>: thisSession  <span class="c"># omit to use the first context method, or the built-in default</span></pre>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">If no context method is defined, the FEMO compiler uses a built-in default — it retrieves context from the current session filtered by scope. This is sufficient for most scenarios.</div>
+      </div>
+    </div>
+
+    <!-- ─── 08 action ai ─── -->
+    <div class="doc-section" id="sec-action-ai">
+      <span class="section-anchor" id="s-action-ai"></span>
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2 class="section-title">AI Action — @ai</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>The most common action type. Calls an LLM to complete one round of dialogue.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · full field reference</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> wolf_kill <span class="at">@ai</span>(<span class="at">@wolf</span>):
+    <span class="f">prompt</span>: <span class="v">|</span>
+        It is night {turn_count}. Surviving players: {alive_players}.
+        You are the werewolf. Choose a target to eliminate.
+        After reasoning, output: SET VARIABLE: &lt;&lt;@KILL = @player_name&gt;&gt;
+    <span class="f">scope</span>: [<span class="at">@hostgod</span>, <span class="at">@wolf</span>]
+    <span class="f">out</span>: wolf_target(string, <span class="s">"kill target"</span>)
+    <span class="f">resolve</span>: game_logic.resolve_target(@KILL, alive_players)
+    <span class="f">max_retries</span>: <span class="v">3</span>
+    <span class="f">fallback</span>: host_emergency
+    <span class="f">context</span>: thisSession
+    <span class="f">memory</span>: rag10</pre>
+      </div>
+
+      <h3 class="sub">Field Reference</h3>
+
+      <h4 class="sub2">prompt</h4>
+      <p>Supports <span class="hl">{var}</span> f-string interpolation. By default all global variables are substituted; if an <span class="hl">in:</span> field is present, only the listed variables are substituted (useful for controlling information exposure).</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · in field example</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> coder_act <span class="at">@ai</span>(<span class="at">@coder</span>):
+    <span class="f">in</span>: my_task = task_list[<span class="at">@coder</span>]   <span class="c"># left=name used in prompt, right=global variable expression</span>
+    <span class="f">prompt</span>: <span class="s">"Your task is: {my_task}"</span>    <span class="c"># {other_var} won't be replaced — preserved as-is</span></pre>
+      </div>
+
+      <h4 class="sub2">scope</h4>
+      <p>Defines which actors can see this round of dialogue. Supports dynamic variables, e.g. <span class="hl">scope: playersInPark</span>. See section 18 for details.</p>
+
+      <h4 class="sub2">out — AI Output Variable</h4>
+      <p>Declares which variable the AI must output. Format: <span class="hl">variable_name(type, "label")</span>. The AI must include <code>SET VARIABLE: &lt;&lt;var_name = value&gt;&gt;</code> in its reply. The variable must already be declared in <code>vars</code>.</p>
+      <p>Writing to a dictionary key is also supported: <span class="hl">vote_results.@voter(string, "")</span> stores the value into the specified key of the dict.</p>
+
+      <h4 class="sub2">resolve — Validation Function (optional)</h4>
+      <p>Used when complex validation or non-standard AI output format handling is needed.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo + python · resolve example</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># in .femo</span>
+<span class="f">resolve</span>: game_logic.resolve_target(@KILL, alive_players, SET_VARIABLE)
+<span class="c"># including SET_VARIABLE causes the compiler to pass in any failed-parse assignment list</span>
+
+<span class="c"># Python (utils/game.py)</span>
+def resolve_target(@KILL=None, alive_players=None, SET_VARIABLE=None, **kwargs):
+    if @KILL and @KILL in alive_players:
+        return [(True, False, <span class="s">""</span>)]           <span class="c"># (is_success, show_to_ai, feedback)</span>
+    if SET_VARIABLE:                           <span class="c"># built-in parse failed — handle manually</span>
+        import re
+        for item in SET_VARIABLE:
+            m = re.match(r<span class="s">'@KILL\s*=\s*@(\w+)'</span>, item)
+            if m and f<span class="s">"@{m.group(1)}"</span> in alive_players:
+                return [(True, False, <span class="s">""</span>)]
+    return [(False, True, <span class="s">"Target not in alive players. Please choose again."</span>)]</pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>Current version limitation</strong>: <code>max_retries</code> and <code>fallback</code> fields are reserved but auto-retry is not yet implemented. The <code>show_to_ai</code> and <code>feedback</code> return values in <code>resolve</code> are also not yet active.</div>
+      </div>
+
+      <h4 class="sub2">Dynamic @actor_expr</h4>
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">When using a dynamic variable in the action's parentheses (e.g. <code>@ai(@speaker)</code>), the <code>for</code>/<code>par</code> loop variable name must exactly match the variable name in the parentheses — otherwise the engine errors immediately.</div>
+      </div>
+    </div>
+
+    <!-- ─── 09 human action ─── -->
+    <div class="doc-section" id="sec-action-human">
+      <span class="section-anchor" id="s-action-human"></span>
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2 class="section-title">Human Action — @human</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>Syntax is largely identical to @ai. Used to incorporate human player input into the workflow.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> human_vote <span class="at">@human</span>(<span class="at">@player</span>):
+    <span class="f">prompt</span>: <span class="s">Cast your vote:</span>
+    <span class="f">scope</span>: [<span class="at">@hostgod</span>] + alive_players
+    <span class="f">out</span>: vote_target(dropdown, choices=alive_players, label=<span class="s">"Vote"</span>)
+    <span class="f">resolve</span>: game_logic.resolve_human_vote
+
+<span class="c"># Let a human play as a specific AI role, inheriting that role's scope:</span>
+<span class="k">action</span> seer_act <span class="at">@human</span>(<span class="at">@player</span>) as (<span class="at">@seer</span>):
+    <span class="f">prompt</span>: <span class="s">You are now the Seer. Who do you want to inspect?</span>
+    <span class="f">scope</span>: [<span class="at">@seer</span>, <span class="at">@hostgod</span>]</pre>
+      </div>
+
+      <ul>
+        <li>The <code>out</code> type <strong>dropdown</strong> maps to a dropdown UI component in the frontend</li>
+        <li>Human actions support context (same syntax as AI actions) but not memory</li>
+        <li><strong>as (@role)</strong>: allows the human player to enter a specific AI role's private perspective</li>
+      </ul>
+    </div>
+
+    <!-- ─── 10 assign ─── -->
+    <div class="doc-section" id="sec-action-assign">
+      <span class="section-anchor" id="s-action-assign"></span>
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2 class="section-title">Assignment Action — @assign</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>Lightweight assignment — <em>does not call an LLM</em>, directly modifies global variables.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · supported operations</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> next_turn <span class="at">@assign</span>:
+    <span class="f">out</span>: day_count <span class="v">+=</span> <span class="v">1</span>
+
+<span class="k">action</span> reset_scene <span class="at">@assign</span>:
+    <span class="f">out</span>: current_scene <span class="v">=</span> <span class="s">"tavern"</span>, time <span class="v">=</span> <span class="v">sunset</span>   <span class="c"># multiple assignments, comma-separated</span>
+
+<span class="k">action</span> update_park <span class="at">@assign</span>:
+    <span class="f">out</span>: playerInPark   <span class="v">= add(</span><span class="at">@Alice</span><span class="v">)</span>
+         playerInMarket <span class="v">= remove(</span><span class="at">@Alice</span><span class="v">)</span>   <span class="c"># multi-line out is supported</span></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Operation</th><th>Meaning</th></tr>
+          <tr><td><code>= value</code></td><td>Direct assignment</td></tr>
+          <tr><td><code>+= N</code></td><td>Add N</td></tr>
+          <tr><td><code>-= N</code></td><td>Subtract N</td></tr>
+          <tr><td><code>= add(element)</code></td><td>Append element to list</td></tr>
+          <tr><td><code>= remove(element)</code></td><td>Remove element from list</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── 11 func ─── -->
+    <div class="doc-section" id="sec-action-func">
+      <span class="section-anchor" id="s-action-func"></span>
+      <div class="section-header">
+        <span class="section-num">11</span>
+        <h2 class="section-title">Python Function Call — @func</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>Calls a Python function declared in the <span class="hl">code:</span> block to handle complex logic.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">action</span> resolve_night <span class="at">@func</span>(my_utils.resolve_night):
+    <span class="f">in</span>:
+        kill_target = wolf_target        <span class="c"># left=Python param name, right=FEMO variable expression</span>
+        save        = witch_save_target
+    <span class="f">out</span>: dead_tonight, alive_players</pre>
+      </div>
+
+      <h3 class="sub">in Parameter Rules</h3>
+      <ul>
+        <li><strong>Explicit mode</strong> (with <code>in:</code>): strictly passes declared params, format <code>param_name = variable_expression</code></li>
+        <li><strong>Auto-inference mode</strong> (no <code>in:</code>): matches Python function signature against vars by name</li>
+      </ul>
+
+      <h3 class="sub">out Receiving Rules</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Function Return Type</th><th>out Behavior</th></tr>
+          <tr><td>Returns a <strong>dict</strong></td><td>Matches by key to variable names in <code>out</code> — keys must exactly match</td></tr>
+          <tr><td>Returns a <strong>single value</strong></td><td>When <code>out</code> declares exactly one variable, assigned directly</td></tr>
+          <tr><td><code>out: dict.key</code> form</td><td>Function returns just the final value; the compiler handles writing it to the specified dict key</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Passing @actor Variables to Python</h3>
+      <p>When an <code>in</code> variable is an @actor type, the engine automatically packages it as a dict for Python:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">python · received actor dict</span><button class="code-copy">copy</button></div>
+        <pre>{
+    <span class="s">"type"</span>:     <span class="s">"ai"</span>,
+    <span class="s">"name"</span>:     <span class="s">"@ellis"</span>,
+    <span class="s">"soul"</span>:     <span class="v">3</span>,
+    <span class="s">"hp"</span>:       <span class="v">100</span>,         <span class="c"># from the hp dict in vars</span>
+    <span class="s">"location"</span>: <span class="s">"tavern"</span>    <span class="c"># from the location dict in vars</span>
+}</pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">Common mistake: when using <code>out: dict.key</code>, the function should return only the final value — don't build the dict yourself. When returning a dict, all keys must exactly match the declared out variable names — extra or missing keys will error.</div>
+      </div>
+    </div>
+
+    <!-- ─── 12 Flow Basic ─── -->
+    <div class="doc-section" id="sec-flow-basic">
+      <span class="section-anchor" id="s-flow-basic"></span>
+      <div class="section-header">
+        <span class="section-num">12</span>
+        <h2 class="section-title">Basic Chain Flow</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+      <p>Flow chains Nodes (position markers) together. <span class="hl">[START]</span> and <span class="hl">[END]</span> are reserved keywords and must exist in <code>mainflow</code>.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>Key distinction</strong>: Action = behavior (what to do, has no position); Node = a position container (holds an action or module); Flow = a directed graph that chains Nodes together.<br><br>Reference an Action without prefix; reference a Module with the <code>&amp;</code> prefix.</div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · sequential chain</span><button class="code-copy">copy</button></div>
+        <pre><span class="p">[START]</span> <span class="p">-></span> action0 <span class="p">-></span> <span class="p">[B]</span>:action1 <span class="p">-></span> &amp;module1 <span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># Split across multiple lines when it gets long — connect head and tail nodes:</span>
+<span class="p">[START]</span> <span class="p">-></span> wolf_discuss <span class="p">-></span> seer_check <span class="p">-></span> <span class="p">[A]</span>:tell_seer
+<span class="p">[A]</span> <span class="p">-></span> witch_ask <span class="p">-></span> resolve_night <span class="p">-></span> <span class="p">[END]</span></pre>
+      </div>
+
+      <h3 class="sub">Loops Require Nodes</h3>
+      <div class="two-col">
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">❌ Not a loop</span></div>
+          <pre><span class="c"># This just runs action1 a second time</span>
+action1 <span class="p">-></span> action2 <span class="p">-></span> action1</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">✅ A real loop</span></div>
+          <pre><span class="c"># Returns to [A]'s position and continues from there</span>
+<span class="p">[A]</span>:action1 <span class="p">-></span> action2 <span class="p">-></span> <span class="p">[A]</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 13 fork ─── -->
+    <div class="doc-section" id="sec-flow-fork">
+      <span class="section-anchor" id="s-flow-fork"></span>
+      <div class="section-header">
+        <span class="section-num">13</span>
+        <h2 class="section-title">Concurrent Fork</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+      <p>fork declares concurrent branches at this point. Each branch runs in a new child thread — ideal for calling multiple LLMs simultaneously.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · two syntaxes</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># Syntax 1: indented branches</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="p">[B]</span> <span class="p">-></span>
+<span class="k">fork</span>:
+    <span class="p">-></span> [visit]
+    <span class="p">-></span> [solo]
+
+<span class="c"># Syntax 2: multiple same-indent lines (equivalent)</span>
+<span class="p">[C]</span> <span class="p">-></span> [visit]
+<span class="p">[C]</span> <span class="p">-></span> [solo]
+
+<span class="c"># With conditions — if (Python expression, @actor auto-converted to dict)</span>
+<span class="p">[A]</span> <span class="p">-></span>
+<span class="k">fork</span>:
+    <span class="p">-></span> if (var == true) <span class="p">-></span> <span class="p">[B]</span>
+    <span class="p">-></span> if (score > 5 and level >= 3) <span class="p">-></span> <span class="p">[C]</span>
+    <span class="p">-></span> if (<span class="at">@Portia</span>.hp == 0) <span class="p">-></span> <span class="p">[D]</span>   <span class="c"># @actor expressions work directly</span></pre>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">fork only handles <strong>splitting</strong>, not merging. Use <code>join</code> (next section) for merging. Branches without <code>if</code> conditions all launch unconditionally in parallel.</div>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">You can skip <code>fork</code> entirely and use the mermaid-style multi-line arrow notation to describe branches — sometimes it's simpler. The benefit of <code>fork</code>: less typing when there are many branches, and a cleaner structure for debugging.</div>
+      </div>
+
+      <h3 class="sub">Animation: fork concurrent branching</h3>
+      <div class="anim-wrap" id="anim-fork">
+        <canvas id="canvas-fork" width="700" height="220"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="forkAnim.restart()">↺ Replay</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 14 join ─── -->
+    <div class="doc-section" id="sec-flow-join">
+      <span class="section-anchor" id="s-flow-join"></span>
+      <div class="section-header">
+        <span class="section-num">14</span>
+        <h2 class="section-title">Merge with Join</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+      <p>join is defined at the <em>receiving end</em>, declaring "which upstream nodes I'm waiting for."</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">join</span>(all):
+    <span class="p">[B]</span> <span class="p">-></span>
+    <span class="p">[C]</span> <span class="p">-></span>
+to [next_node]
+
+<span class="c"># join(2): continue once 2 upstream nodes arrive; cancel remaining branches</span>
+<span class="k">join</span>(<span class="v">2</span>):
+    <span class="p">[D]</span> <span class="p">-></span>
+    <span class="p">[E]</span> <span class="p">-></span>
+    <span class="p">[F]</span> <span class="p">-></span>
+to [next_node]</pre>
+      </div>
+
+      <ul>
+        <li><span class="hl">join(all)</span>: wait for all declared upstream nodes to arrive</li>
+        <li><span class="hl">join(N)</span>: continue once N upstream nodes arrive; cancel remaining branches (only those from this fork)</li>
+      </ul>
+
+      <h3 class="sub">join and Mermaid-style Syntax Are Equivalent</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · two equivalent styles</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># join style</span>
+<span class="k">join</span>(all):
+    <span class="p">[B]</span> <span class="p">-></span>
+    <span class="p">[C]</span> <span class="p">-></span>
+to [next_node]
+
+<span class="c"># Equivalent mermaid-style</span>
+<span class="p">[B]</span> <span class="p">-></span> [next_node]
+<span class="p">[C]</span> <span class="p">-></span> [next_node]</pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">You can skip <code>join</code> entirely: pointing multiple branches at the same node in mermaid style naturally merges them — equivalent to <code>join(all)</code>. Only write <code>join(N)</code> when you need the "stop remaining branches after N arrive" behavior.</div>
+      </div>
+    </div>
+
+    <!-- ─── 15 for ─── -->
+    <div class="doc-section" id="sec-flow-for">
+      <span class="section-anchor" id="s-flow-for"></span>
+      <div class="section-header">
+        <span class="section-num">15</span>
+        <h2 class="section-title">Sequential Loop — for</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+
+      <p>Iterates over an array, executing the loop body <em>sequentially</em> for each element — equivalent to an unrolled sequential chain. The entire <code>for</code> block is a single unit; the preceding node is written on the same line as the <span class="hl">for</span> keyword.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · complete for block</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># Full structure: preceding node on the same line as for</span>
+<span class="p">[B]</span> <span class="p">-></span> <span class="k">for</span> <span class="at">@speaker</span> in speaker_array:
+    <span class="p">-></span> <span class="p">[C]</span>:speak <span class="p">-></span> <span class="p">[D]</span>:respond <span class="p">-></span>
+<span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># Loop variable need not be @actor — plain variables work too</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="k">for</span> i in [<span class="v">1</span>, <span class="v">2</span>, <span class="v">3</span>]:
+    <span class="p">-></span> tick_action <span class="p">-></span>
+<span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># for + if: route by type (exit node is optional)</span>
+<span class="p">[B]</span> <span class="p">-></span> <span class="k">for</span> <span class="at">@player</span> in alive_players:
+    <span class="p">-></span> if (<span class="at">@player</span>.type == <span class="s">"ai"</span>)    <span class="p">-></span> ai_speak <span class="p">-></span>
+    <span class="p">-></span> if (<span class="at">@player</span>.type == <span class="s">"human"</span>) <span class="p">-></span> human_speak <span class="p">-></span>
+<span class="p">-></span> <span class="p">[D]</span></pre>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>Body markers</strong>: inside a loop, mark the first node with a leading <code>-&gt;</code> and the last node with a trailing <code>-&gt;</code>. The exit node is optional — if provided, flow continues there after the loop ends; if omitted, the branch terminates automatically. Removing these leading/trailing arrows, the loop body syntax is identical to regular flow.</div>
+      </div>
+      <div class="callout danger">
+        <span class="callout-icon">🚫</span>
+        <div class="callout-body">If the loop variable is an @actor type, its name must exactly match the dynamic variable name in the action definition's parentheses — otherwise the engine errors immediately to prevent silently using the wrong actor.</div>
+      </div>
+
+      <h3 class="sub">Animation: for sequential loop</h3>
+      <div class="anim-wrap" id="anim-for">
+        <canvas id="canvas-for" width="700" height="200"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="forAnim.restart()">↺ Replay</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 16 par ─── -->
+    <div class="doc-section" id="sec-flow-par">
+      <span class="section-anchor" id="s-flow-par"></span>
+      <div class="section-header">
+        <span class="section-num">16</span>
+        <h2 class="section-title">Parallel Loop — par</h2>
+        <span class="section-badge badge-flow">Flow</span>
+      </div>
+
+      <p>A shorthand for fork + join: iterates over an array, executing <em>concurrently</em> for each element. Dramatically speeds up parallel LLM calls. The preceding node is written on the same line as the <span class="hl">par</span> keyword.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · par examples</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># Example 1: preceding node on same line, concurrent module calls</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@coder</span> in coders:
+    <span class="p">-></span> &amp;CoderSandbox(<span class="at">@coder</span>, task_list[<span class="at">@coder</span>]) <span class="p">-></span>
+<span class="p">-></span> <span class="p">[D]</span>
+
+<span class="c"># Example 2: each branch executes multiple steps concurrently</span>
+<span class="p">[before]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@coder</span> in workers:
+    <span class="p">-></span> <span class="p">[A]</span>:writecode <span class="p">-></span> <span class="p">[B]</span>:trycode <span class="p">-></span>
+<span class="p">-></span> <span class="p">[D]</span>
+
+<span class="c"># Variable need not be @actor</span>
+<span class="p">[A]</span> <span class="p">-></span> <span class="k">par</span> i in [<span class="v">1</span>, <span class="v">2</span>, <span class="v">3</span>]:
+    <span class="p">-></span> tick_action <span class="p">-></span>
+<span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># Exit node is optional — branches terminate automatically when done</span>
+<span class="p">[VOTE]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@player</span> in alive_players:
+    <span class="p">-></span> cast_vote <span class="p">-></span>
+<span class="c"># No exit node — each branch stops after finishing</span></pre>
+      </div>
+
+      <ul>
+        <li>Multiple nodes inside a branch run sequentially; branches run concurrently with each other</li>
+        <li>The parallel variable is branch-local — different values per branch, no interference; referenced directly in actions without explicit passing</li>
+        <li>Body markers are the same as <code>for</code>: leading <code>-&gt;</code> marks the first node, trailing <code>-&gt;</code> marks the last</li>
+        <li>Exit node is optional — if present, all branches converge there; if absent, each branch terminates independently</li>
+        <li>The parallel variable need not be @actor — <code>par i in [1,2,3]:</code> is fully valid</li>
+        <li>If the parallel variable is an @actor type, its name must exactly match the action definition's dynamic variable name — otherwise the engine errors immediately</li>
+      </ul>
+
+      <h3 class="sub">Animation: par concurrent execution</h3>
+      <div class="anim-wrap" id="anim-par">
+        <canvas id="canvas-par" width="700" height="260"></canvas>
+        <div class="anim-controls">
+          <button class="anim-btn" onclick="parAnim.restart()">↺ Replay</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── 17 modules ─── -->
+    <div class="doc-section" id="sec-modules">
+      <span class="section-anchor" id="s-modules"></span>
+      <div class="section-header">
+        <span class="section-num">17</span>
+        <h2 class="section-title">Modules</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>A Module is a black-box sub-workflow with an entry point (<span class="hl">[IN]</span>), exit point (<span class="hl">[OUT]</span>), break exit (<span class="hl">[BREAK]</span>), local vars, and an internal flow.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · module definition</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">module</span> CoderSandbox(task_var):
+    <span class="k">vars</span>:
+        finish = <span class="v">false</span>         <span class="c"># local variable — cleared when module exits</span>
+    
+    <span class="k">action</span> write_code <span class="at">@ai</span>(<span class="at">@coder</span>):
+        <span class="f">prompt</span>: <span class="s">"Task: {task_var}. Use shell tools to write the code."</span>
+        <span class="f">scope</span>: [<span class="at">@coder</span>]
+    
+    <span class="k">action</span> submit_code <span class="at">@ai</span>(<span class="at">@coder</span>):
+        <span class="f">prompt</span>: <span class="v">|</span>
+            Test the code. Once confirmed correct, output:
+            SET VARIABLE: &lt;&lt;finish = true&gt;&gt;
+        <span class="f">out</span>: finish(bool, <span class="s">"done?"</span>)
+    
+    <span class="k">flow</span>:
+        <span class="p">[IN]</span> <span class="p">-></span> write_code <span class="p">-></span> submit_code <span class="p">-></span>
+        <span class="k">fork</span>:
+            <span class="p">-></span> if (finish == true)  <span class="p">[OUT]</span>
+            <span class="p">-></span> if (finish == false) <span class="p">[IN]</span></pre>
+      </div>
+
+      <h3 class="sub">Calling a Module</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># In mainflow or another module's flow</span>
+<span class="p">[START]</span> <span class="p">-></span> plan <span class="p">-></span> &amp;CoderSandbox(task_var) <span class="p">-></span> <span class="p">[END]</span>
+
+<span class="c"># Combined with par for concurrent module instances</span>
+<span class="p">[START]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@coder</span> in coders:
+    <span class="p">-></span> &amp;CoderSandbox(task_list[<span class="at">@coder</span>]) <span class="p">-></span></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>Module local variables</strong> are cleared on exit and cannot be returned to the parent module. Use global variables to pass results out.<br><strong>Avoid module recursion</strong>: steps inside a module count as 1 globally — recursion creates infinite loops that cannot be caught by <code>max_steps</code>.</div>
+      </div>
+    </div>
+
+    <!-- ─── 18 scope ─── -->
+    <div class="doc-section" id="sec-scope">
+      <span class="section-anchor" id="s-scope"></span>
+      <div class="section-header">
+        <span class="section-num">18</span>
+        <h2 class="section-title">scope — Perspective Isolation</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>scope defines "which actors can see this round of dialogue" — the core mechanism for perspective isolation in Femo.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · scope usage</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># Static scope: only these two actors can see this</span>
+<span class="f">scope</span>: [<span class="at">@hostgod</span>, <span class="at">@wolf</span>]
+
+<span class="c"># Dynamic scope: variable resolved to @actor list at runtime</span>
+<span class="f">scope</span>: playersInPark
+
+<span class="c"># Mixed</span>
+<span class="f">scope</span>: [<span class="at">@hostgod</span>] + alive_players</pre>
+      </div>
+
+      <p>When storing a dialogue record, the system writes the soul IDs of all actors in scope to the <code>soul_scope</code> database field. FEMO's built-in context method filters by this field, so each actor can only retrieve the context they were present for.</p>
+
+      <div class="callout tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>A useful analogy</strong>: scope is like a "room" — only people present can remember the conversation. More precisely: a god stores all history in a cosmic hard drive, but only those who were actually there are authorized to retrieve it. This is why perspective isolation in a Werewolf game requires just one line of scope.</div>
+      </div>
+    </div>
+
+    <!-- ─── 19 actor type system ─── -->
+    <div class="doc-section" id="sec-actor-system">
+      <span class="section-anchor" id="s-actor-system"></span>
+      <div class="section-header">
+        <span class="section-num">19</span>
+        <h2 class="section-title">@actor Type System</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>An Actor is not just a role configuration — it is a <em>variable type</em> with identity and state, assignable and passable like any variable.</p>
+
+      <h3 class="sub">Dual-Perspective Attribute Access</h3>
+      <p>The dict-perspective and entity-perspective are fully equivalent — use whichever reads more naturally:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · equivalent forms</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># Assume vars contains: hp = {@wolf: 100, @seer: 100}</span>
+
+hp.<span class="at">@wolf</span>      <span class="c">  # dict perspective: look up @wolf in the hp registry</span>
+<span class="at">@wolf</span>.hp      <span class="c">  # entity perspective: @wolf's hp attribute</span>
+<span class="c"># Fully equivalent — usable in prompts, assignments, and if conditions</span>
+
+<span class="c"># Prompt f-string</span>
+<span class="s">"Your current HP is {hp.@wolf}"</span>      <span class="c"># same as</span>
+<span class="s">"Your current HP is {@wolf.hp}"</span>
+
+<span class="c"># AI assignment signal</span>
+SET VARIABLE: &lt;&lt;hp.<span class="at">@wolf</span> -= 30&gt;&gt;   <span class="c"># same as</span>
+SET VARIABLE: &lt;&lt;<span class="at">@wolf</span>.hp -= 30&gt;&gt;</pre>
+      </div>
+
+      <h3 class="sub">Static Reserved Attributes</h3>
+      <p>When resolving <span class="hl">@entity.attribute</span>, the following 5 reserved attributes are checked first. If not matched, the runtime looks for a same-named dict in vars:</p>
+      <div class="def-grid">
+        <div class="def-term">type</div>   <div class="def-desc">Actor type: <code>"ai"</code> or <code>"human"</code></div>
+        <div class="def-term">soul</div>   <div class="def-desc">Soul ID (integer)</div>
+        <div class="def-term">source</div> <div class="def-desc">Model name or user ID</div>
+        <div class="def-term">tools</div>  <div class="def-desc">Attached tool list</div>
+        <div class="def-term">name</div>   <div class="def-desc">Actor name as string</div>
+      </div>
+      <p>This means you can attach dynamic state to actors without modifying their definition — just create a matching dict in vars and <span class="hl">@entity.attribute</span> access works automatically.</p>
+    </div>
+
+    <!-- ─── 20 SET VARIABLE ─── -->
+    <div class="doc-section" id="sec-setvariable">
+      <span class="section-anchor" id="s-setvariable"></span>
+      <div class="section-header">
+        <span class="section-num">20</span>
+        <h2 class="section-title">AI Variable Assignment Signal</h2>
+        <span class="section-badge badge-adv">Advanced</span>
+      </div>
+      <p>Guide the AI through the prompt to output assignment signals in its reply, driving updates to flow-control variables.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">AI output examples (multiple valid formats)</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># Standard format</span>
+I vote for player 3. SET VARIABLE: &lt;&lt;@VOTE_TARGET = <span class="at">@player3</span>&gt;&gt;
+I think prices should rise. SET VARIABLE: &lt;&lt;Price += 200&gt;&gt;
+I went to the park. SET VARIABLE: &lt;&lt;playersInPark = add(<span class="at">@soul1</span>)&gt;&gt;
+I left the park. SET VARIABLE: &lt;&lt;playersInPark = remove(<span class="at">@soul1</span>)&gt;&gt;</pre>
+      </div>
+
+      <h3 class="sub">Assignment Parsing Flow</h3>
+      <ol>
+        <li>The engine scans the full AI reply for all <code>SET VARIABLE: &lt;&lt;...&gt;&gt;</code> statements</li>
+        <li>Parses each assignment expression — successful ones update the variable immediately</li>
+        <li>Failed parses are stored in the <span class="hl">SET_VARIABLE</span> list</li>
+        <li>If the action has no <code>resolve</code> function, failed assignments are discarded with a warning</li>
+        <li>If <code>resolve</code> is declared and <code>SET_VARIABLE</code> appears in its parameters, the engine passes the list for user handling</li>
+      </ol>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Operation</th><th>Format</th></tr>
+          <tr><td>Direct assign</td><td><code>&lt;&lt;VAR = value&gt;&gt;</code></td></tr>
+          <tr><td>Add</td><td><code>&lt;&lt;VAR += N&gt;&gt;</code></td></tr>
+          <tr><td>Subtract</td><td><code>&lt;&lt;VAR -= N&gt;&gt;</code></td></tr>
+          <tr><td>Append to list</td><td><code>&lt;&lt;VAR = add(element)&gt;&gt;</code></td></tr>
+          <tr><td>Remove from list</td><td><code>&lt;&lt;VAR = remove(element)&gt;&gt;</code></td></tr>
+          <tr><td>Dict key assign</td><td><code>&lt;&lt;dict.@key = value&gt;&gt;</code> or <code>&lt;&lt;@actor.attr += N&gt;&gt;</code></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── 21 Debug ─── -->
+    <div class="doc-section" id="sec-debug">
+      <span class="section-anchor" id="s-debug"></span>
+      <div class="section-header">
+        <span class="section-num">21</span>
+        <h2 class="section-title">Debug Guide</h2>
+        <span class="section-badge badge-debug">Debug</span>
+      </div>
+
+      <h3 class="sub">Compiler Error Reference</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Error Type</th><th>Cause</th><th>Fix</th></tr>
+          <tr><td>Undeclared variable</td><td>An action uses a variable not declared in <code>vars</code></td><td>Declare it in <code>vars:</code> before use</td></tr>
+          <tr><td>File not found</td><td>The path in <code>file:"path"</code> doesn't exist</td><td>Check the path; note relative path behavior</td></tr>
+          <tr><td>Method undefined</td><td>An action references an undefined memory/context method</td><td>Verify name matches definition exactly (case-sensitive)</td></tr>
+          <tr><td>Scope resolution failed</td><td>scope contains an unresolvable element</td><td>Ensure all variables/actors in scope are declared</td></tr>
+          <tr><td>Loop variable name mismatch</td><td>for/par variable name doesn't match the action's parenthetical variable</td><td>Make them identical, e.g. both <code>@speaker</code></td></tr>
+          <tr><td>Database constraint violation</td><td>A database operation violates a constraint</td><td>Engine re-throws the exception — inspect the database schema</td></tr>
+          <tr><td>@func out key mismatch</td><td>Python return dict keys don't match <code>out</code> variable names</td><td>Ensure a 1-to-1 match between keys and declared out names</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Common Runtime Issues</h3>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>AI doesn't output the assignment variable</strong><br>
+        Check that the prompt's instruction is explicit enough. Recommend stating the exact format in the prompt: <code>After your analysis, you must output SET VARIABLE: &lt;&lt;VAR = value&gt;&gt;</code>. You can also use a <code>resolve</code> function to handle non-standard AI output.</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>AI actor says things it shouldn't (perspective leak)</strong><br>
+        Check scope configuration. Is each action's scope correctly isolated? For example, werewolf nighttime speech should have scope limited to wolf team members — excluding the Seer.</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>Loop never ends</strong><br>
+        Check exit conditions: ① Is the for loop's termination condition correctly iterating through the array? ② Does the module's fork condition correctly point to [OUT]? ③ Is there recursion inside a module? (Should be avoided — see section 17.)</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>@func receives empty parameters</strong><br>
+        Check: ① In auto-inference mode, do the Python function param names exactly match variable names in <code>vars</code>? ② When an @actor variable is passed to Python, it arrives as a dict, not a string — access fields with <code>actor.get("soul")</code> etc.</div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>Module local variables "leaking"</strong><br>
+        Module vars are cleared on exit and cannot be returned to the parent. To pass results out of a module, pre-declare a variable in the mainflow-level global vars, then update it from inside the module via the <code>SET VARIABLE</code> signal — don't rely on module-local variables for output.</div>
+      </div>
+
+      <h3 class="sub">Debug Tips</h3>
+      <ul>
+        <li><strong>Narrow scope</strong>: validate individual action behavior with a simple script first, then compose into complex flows</li>
+        <li><strong>Add @hostgod to all scopes</strong>: gives one "god-mode" actor access to all scopes, making it easy to review the full dialogue history</li>
+        <li><strong>Use the super_debug.femo template</strong>: the project's built-in debug script features two concurrent branches and multi-turn discussion — ideal for tracking subtle bugs</li>
+        <li><strong>Insert human nodes anywhere</strong>: add a <code>@human</code> node before or after key actions to pause, interject, or inspect current state</li>
+        <li><strong>Inspect the database</strong>: all dialogue records are stored in the database — query the <code>soul_scope</code> field directly to confirm perspective isolation is working</li>
+      </ul>
+    </div>
+
+    <!-- ─── 22 Full Example ─── -->
+    <div class="doc-section" id="sec-example">
+      <span class="section-anchor" id="s-example"></span>
+      <div class="section-header">
+        <span class="section-num">22</span>
+        <h2 class="section-title">Complete Example</h2>
+        <span class="section-badge badge-core">Core</span>
+      </div>
+      <p>A fully runnable script featuring AI actors, memory, context, and a concurrent voting round:</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">femo · complete_example.femo</span><button class="code-copy">copy</button></div>
+        <pre><span class="k">meta</span>:
+    name     = <span class="s">"Three-Person Chat Room"</span>
+    database = file:<span class="s">"chat.db"</span>
+    owner    = [<span class="v">1</span>]
+    session  = <span class="k">new</span>
+
+<span class="k">vars</span>:
+    memory_text  = <span class="s">""</span>
+    context_text = <span class="s">""</span>
+    vote_results = {}
+    winner       = <span class="s">""</span>
+
+<span class="k">code</span>:
+    memfile = file:<span class="s">"femoBridges/MemoryExample.py"</span>
+    ctxfile = file:<span class="s">"femoBridges/ContextExample.py"</span>
+    logic   = file:<span class="s">"vote_logic.py"</span>
+
+<span class="k">actors</span>:
+    ai <span class="at">@alice</span>  = soul:<span class="v">1</span>, source:<span class="v">deepseek</span>
+    ai <span class="at">@bob</span>    = soul:<span class="v">2</span>, source:<span class="v">glm5</span>
+    human <span class="at">@me</span>  = soul:<span class="v">0</span>, source:<span class="v">1</span>
+
+<span class="k">memory</span> rag10(memfile.retrieve_example):
+    <span class="f">in</span>: prompt, session_id, <span class="at">@actor</span>
+    <span class="f">out</span>: memory_text
+
+<span class="k">context</span> thisSession(ctxfile.findThisSession):
+    <span class="f">in</span>: session, <span class="at">@actor</span>
+    <span class="f">out</span>: context_text
+
+<span class="c"># ── Actions ──</span>
+
+<span class="k">action</span> alice_speak <span class="at">@ai</span>(<span class="at">@alice</span>):
+    <span class="f">prompt</span>: <span class="s">"Share a brief thought on today's topic with the group."</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="k">action</span> bob_speak <span class="at">@ai</span>(<span class="at">@bob</span>):
+    <span class="f">prompt</span>: <span class="s">"Respond briefly to Alice's message."</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="k">action</span> me_speak <span class="at">@human</span>(<span class="at">@me</span>):
+    <span class="f">prompt</span>: <span class="s">"What would you like to say?"</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="c"># Concurrent voting: Alice and Bob vote simultaneously</span>
+<span class="k">action</span> cast_vote <span class="at">@ai</span>(<span class="at">@voter</span>):
+    <span class="f">prompt</span>: <span class="v">|</span>
+        Vote for today's best speaker (@alice or @bob).
+        Output: SET VARIABLE: &lt;&lt;vote_results.<span class="at">@voter</span> = @voted_name&gt;&gt;
+    <span class="f">scope</span>: [<span class="at">@voter</span>]
+    <span class="f">out</span>: vote_results.<span class="at">@voter</span>(string, <span class="s">"vote target"</span>)
+
+<span class="k">action</span> tally <span class="at">@func</span>(logic.tally_votes):
+    <span class="f">in</span>: votes = vote_results
+    <span class="f">out</span>: winner
+
+<span class="k">action</span> announce <span class="at">@ai</span>(<span class="at">@alice</span>):
+    <span class="f">prompt</span>: <span class="s">"Vote results: {winner} received the most votes. Congratulations!"</span>
+    <span class="f">scope</span>: [<span class="at">@alice</span>, <span class="at">@bob</span>, <span class="at">@me</span>]
+
+<span class="k">mainflow</span>:
+    <span class="p">[START]</span> <span class="p">-></span> me_speak <span class="p">-></span> alice_speak <span class="p">-></span> bob_speak <span class="p">-></span> <span class="p">[VOTE]</span>
+    
+    <span class="c"># Concurrent vote — everyone votes at the same time</span>
+    <span class="p">[VOTE]</span> <span class="p">-></span> <span class="k">par</span> <span class="at">@voter</span> in [<span class="at">@alice</span>, <span class="at">@bob</span>]:
+        <span class="p">-></span> cast_vote <span class="p">-></span>
+    <span class="p">-></span> <span class="p">[tally]</span>: tally
+    <span class="p">[tally]</span> <span class="p">-></span> announce <span class="p">-></span> <span class="p">[END]</span></pre>
+      </div>
+    </div>
+
+    <!-- ─── 23 Prompt Blocks ─── -->
+    <div class="doc-section" id="sec-blocks">
+      <span class="section-anchor" id="s-blocks"></span>
+      <div class="section-header">
+        <span class="section-num">23</span>
+        <h2 class="section-title">Prompt Block Collection</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p>Before executing each action, the engine automatically collects the following standard blocks and returns them as a dict for the external prompt assembler. The engine only collects and returns the dict — the external framework decides how to assemble them into system/user prompts.</p>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Block Key</th><th>Content</th><th>Source</th></tr>
+          <tr><td><code>basic_safety</code></td><td>Safety policy</td><td><code>meta.system_safety</code></td></tr>
+          <tr><td><code>basic_output</code></td><td>Output quality guidelines</td><td><code>meta.output_style</code></td></tr>
+          <tr><td><code>soul</code></td><td>Character description (system prompt fragment)</td><td>Database <code>souls</code> table, keyed by the current Actor's soul_id</td></tr>
+          <tr><td><code>user_info</code></td><td>User profile</td><td>Database <code>users</code> table, keyed by <code>meta.owner</code></td></tr>
+          <tr><td><code>memory</code></td><td>Memory retrieval result</td><td>User-defined memory function return value</td></tr>
+          <tr><td><code>context</code></td><td>Dialogue history context</td><td>User-defined context function / built-in default</td></tr>
+          <tr><td><code>user_input</code></td><td>Current prompt (after variable substitution)</td><td>The current action's <code>prompt</code> field</td></tr>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">Building-block architecture: the engine only collects blocks — it's not bound to any prompt layout or LLM calling convention. To swap out the LLM bridge module, just wire it up to this blocks dict.</div>
+      </div>
+    </div>
+
+    <!-- ─── 24 Session ─── -->
+    <div class="doc-section" id="sec-session">
+      <span class="section-anchor" id="s-session"></span>
+      <div class="section-header">
+        <span class="section-num">24</span>
+        <h2 class="section-title">Session &amp; Turn Management</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Scenario</th><th>Behavior</th></tr>
+          <tr><td><code>meta.session</code> not specified or <code>new</code></td><td>Creates a new session (database max session_id + 1), turn = 1</td></tr>
+          <tr><td><code>meta.session</code> set to a number</td><td>Resumes that session; turn starts from that session's max turn + 1</td></tr>
+          <tr><td>Specified session doesn't exist</td><td>Error and exit</td></tr>
+        </table>
+      </div>
+
+      <ul>
+        <li>After each <strong>human utterance</strong>: <code>turn_count += 1</code>, <code>step_idx = 0</code></li>
+        <li>Within the same turn, each <strong>AI utterance</strong> increments <code>step_idx += 1</code></li>
+        <li>When creating a new session, <code>meta.name</code> is automatically written to the <code>sessions.title</code> field</li>
+      </ul>
+    </div>
+
+    <!-- ─── 25 Storage ─── -->
+    <div class="doc-section" id="sec-storage">
+      <span class="section-anchor" id="s-storage"></span>
+      <div class="section-header">
+        <span class="section-num">25</span>
+        <h2 class="section-title">Dialog Storage Rules</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <h3 class="sub">When Records Are Stored</h3>
+      <ul>
+        <li><strong>Human utterance (@human action)</strong>: stored in the <code>dialog</code> table, then turn + 1</li>
+        <li><strong>AI reply (@ai action)</strong>: stored in the <code>react_steps</code> table, <code>step_idx</code> incremented</li>
+      </ul>
+
+      <h3 class="sub">Automatic Scope Injection</h3>
+      <p>Each record automatically includes the speaker's own ID (AI soul_id or human user_id) plus all user_ids from <code>meta.owner</code>. After injection, 0 is removed and the list is deduplicated, then stored in the <code>user_scope</code> and <code>soul_scope</code> fields.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">This is the underlying mechanism for scope-based perspective isolation — context retrieval filters by <code>soul_scope</code>, so each actor can only see the history they were present for.</div>
+      </div>
+    </div>
+
+    <!-- ─── 26 DB ─── -->
+    <div class="doc-section" id="sec-db">
+      <span class="section-anchor" id="s-db"></span>
+      <div class="section-header">
+        <span class="section-num">26</span>
+        <h2 class="section-title">Database Schema</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p>Femo uses SQLite with a default file at <span class="hl">./chronica.wor</span>, configurable via the <span class="hl">database</span> field in <code>meta</code>.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">sql · full schema</span><button class="code-copy">copy</button></div>
+        <pre>CREATE TABLE IF NOT EXISTS sessions (
+    session_id     INTEGER PRIMARY KEY,
+    title          TEXT DEFAULT '',
+    owner          TEXT DEFAULT '',
+    participants   TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS dialog (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      INTEGER,
+    turn_id         INTEGER,
+    oratio_idx      INTEGER DEFAULT 0,
+    timestamp       INTEGER DEFAULT 0,
+    has_user_files  INTEGER DEFAULT 0,
+    ai_steps_count  INTEGER DEFAULT 0,
+    user_prompt     TEXT DEFAULT '',
+    user_id         TEXT DEFAULT '',
+    soul_id         TEXT DEFAULT '',
+    user_scope      TEXT DEFAULT '[]',
+    soul_scope      TEXT DEFAULT '[]',
+    work_mode       TEXT DEFAULT 'chat'
+);
+
+CREATE TABLE IF NOT EXISTS files (
+    file_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      INTEGER,
+    turn_id         INTEGER,
+    file_idx        INTEGER DEFAULT 0,
+    file_name       TEXT DEFAULT '',
+    file_content    TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS react_steps (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      INTEGER,
+    turn_id         INTEGER,
+    step_idx        INTEGER DEFAULT 0,
+    timestamp       INTEGER DEFAULT 0,
+    cot             TEXT DEFAULT '',
+    response        TEXT DEFAULT '',
+    tool_call       TEXT DEFAULT '',
+    tool_result     TEXT DEFAULT '',
+    model_id        TEXT DEFAULT '',
+    soul_id         TEXT DEFAULT '',
+    user_scope      TEXT DEFAULT '[]',
+    soul_scope      TEXT DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS souls (
+    idx             INTEGER PRIMARY KEY,
+    soul_id         TEXT,
+    soul_name       TEXT DEFAULT '',
+    description     TEXT DEFAULT '',
+    user_id         TEXT,
+    created_by      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    idx             INTEGER PRIMARY KEY,
+    user_id         TEXT,
+    user_name       TEXT DEFAULT '',
+    profile         TEXT DEFAULT ''
+);</pre>
+      </div>
+    </div>
+
+    <!-- ─── 27 Engine ─── -->
+    <div class="doc-section" id="sec-engine">
+      <span class="section-anchor" id="s-engine"></span>
+      <div class="section-header">
+        <span class="section-num">27</span>
+        <h2 class="section-title">Async Engine Architecture</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p><span class="hl">AsyncEngine</span> (located at <code>femoCompiler/femoAsync.py</code>) is the hub of the entire concurrent system — managing all executors, scheduling coroutine tasks, and providing unified async primitives.</p>
+
+      <h3 class="sub">Core Idea: Scheduling and Execution Are Decoupled</h3>
+      <p>The engine follows a <em>"single-threaded brain, delegated heavy lifting"</em> model:</p>
+      <ul>
+        <li><strong>asyncio event loop</strong>: the sole scheduler, single-threaded, orchestrates all Agent coroutines — no operation blocks the event loop</li>
+        <li><strong>Heavy tasks (CPU-intensive, synchronous I/O, human input waiting)</strong>: always delegated to independent execution pools (process pool or thread pool); the main loop only awaits results</li>
+      </ul>
+      <p>This separation keeps the main loop always responsive — even if one branch is running a long computation or waiting for an LLM, other branches continue advancing.</p>
+
+      <h3 class="sub">Three Executor Types</h3>
+      <div class="def-grid">
+        <div class="def-term">Process Pool</div>
+        <div class="def-desc">CPU-intensive tasks. Size auto-adapts to CPU core count. Tasks queue automatically — when all workers are busy, subsequent tasks wait in an internal queue without being dropped.</div>
+        <div class="def-term">I/O Thread Pool</div>
+        <div class="def-desc">Synchronous blocking I/O (LLM API calls) and @func user code. Each thread launches a persistent background event loop at creation time, completely eliminating <code>no running event loop</code> errors.</div>
+        <div class="def-term">Human Input Manager</div>
+        <div class="def-desc">Thread-safe async waiting built on <code>threading.Event</code>. A coroutine calling <code>wait_for_input</code> suspends; the external side wakes it via <code>provide_input</code>. Supports timeouts.</div>
+      </div>
+
+      <h3 class="sub">Task Scheduling and Join Modes</h3>
+      <p>Each Agent branch (fork branch) is an <span class="hl">asyncio.Task</span>. At fork time, <code>engine.create_task()</code> creates and auto-tracks tasks; at join time, <span class="hl">gather_with_cancel</span> waits or cancels them uniformly.</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Join Mode</th><th>Behavior</th></tr>
+          <tr><td><code>all</code></td><td>Wait for all branches to complete</td></tr>
+          <tr><td><code>any</code></td><td>Cancel all others once any one completes</td></tr>
+          <tr><td><code>n</code></td><td>Cancel all others once the specified count complete</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Context Isolation</h3>
+      <p>Python's standard library <span class="hl">contextvars</span> automatically isolates context variables for each coroutine/thread. Each Agent branch has an independent <code>ExecutionContext</code> — internal variables like <code>node_name</code> and loop variables don't interfere with each other. No manual locking required.</p>
+    </div>
+
+    <!-- ─── 28 Runtime ─── -->
+    <div class="doc-section" id="sec-runtime">
+      <span class="section-anchor" id="s-runtime"></span>
+      <div class="section-header">
+        <span class="section-num">28</span>
+        <h2 class="section-title">Runtime Integration</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+      <p><span class="hl">FEMORunner</span> (located at <code>femoCompiler/FEMO_runtime.py</code>) is the workflow executor. It holds an <code>AsyncEngine</code> instance and delegates all concurrency needs to it.</p>
+
+      <h3 class="sub">Node Execution Routing</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Node Type</th><th>Execution Method</th></tr>
+          <tr><td><code>@func</code></td><td><code>engine.run_in_thread</code>, executed in the thread pool (may auto-switch to process pool based on complexity in the future)</td></tr>
+          <tr><td><code>@ai</code></td><td>LLM calls submitted via <code>engine.run_in_thread</code>; streaming callbacks pushed back safely to the event loop via <code>engine.schedule_threadsafe</code></td></tr>
+          <tr><td><code>@human</code></td><td>In FastAPI mode: the coroutine suspends waiting for frontend input; in CLI mode: the read function is submitted to the thread pool, not blocking the main loop</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Flow Control Primitive → Engine Mapping</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Flow Syntax</th><th>Runtime Implementation</th></tr>
+          <tr><td>Fork</td><td><code>_run_fork</code> creates an <code>engine.create_task()</code> for each branch, stored in the <code>_join_tasks</code> dict</td></tr>
+          <tr><td>Join</td><td><code>_run_join</code> retrieves the task list and calls <code>engine.gather_with_cancel</code> with the configured join mode</td></tr>
+          <tr><td>For loop</td><td>Iterates inside a normal <code>async</code> method; loop body re-enters the gateway via a back-edge — no special engine support needed</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Main Flow Entry Point</h3>
+      <p><code>FEMORunner.run()</code> is the synchronous entry point. It detects whether an event loop is already running:</p>
+      <ul>
+        <li><strong>CLI mode</strong> (no event loop): calls <code>asyncio.run(self.run_async())</code> to start a new loop</li>
+        <li><strong>FastAPI mode</strong> (loop already running): directly <code>await runner.run_async()</code></li>
+      </ul>
+    </div>
+
+    <!-- ─── 29 Dev Guide ─── -->
+    <div class="doc-section" id="sec-devguide">
+      <span class="section-anchor" id="s-devguide"></span>
+      <div class="section-header">
+        <span class="section-num">29</span>
+        <h2 class="section-title">Tuning &amp; Extension Guide</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <h3 class="sub">Thread Pool &amp; Process Pool Tuning</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Executor</th><th>Default</th><th>Tuning Advice</th></tr>
+          <tr><td>I/O Thread Pool</td><td>10 threads</td><td>Increase to 20–30 for heavy concurrent LLM calls; keep small when a dedicated AI thread pool is split out. Configure via <code>thread_workers</code> parameter</td></tr>
+          <tr><td>Process Pool</td><td>Auto-detected CPU core count</td><td>Increase when there are many CPU-intensive @func nodes. Configure via <code>cpu_workers</code> param or <code>PROCESS_WORKERS</code> env var</td></tr>
+        </table>
+      </div>
+
+      <h3 class="sub">Adding a New Executor Type (Example: @gpu)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">python · femoAsync.py</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 1. Add a dedicated executor in AsyncEngine.__init__</span>
+self.gpu_pool = ThreadPoolExecutor(max_workers=<span class="v">2</span>)
+self._gpu_semaphore = asyncio.Semaphore(<span class="v">2</span>)
+
+<span class="c"># Add a new method</span>
+async def run_gpu(self, func, *args, **kwargs):
+    async with self._gpu_semaphore:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self.gpu_pool, func, *args, **kwargs)</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">python · FEMO_runtime.py</span><button class="code-copy">copy</button></div>
+        <pre><span class="c"># 2. Add routing in _exec_action_def</span>
+elif etype == <span class="s">'gpu'</span>:
+    return await self._exec_gpu(ad, eparam)
+
+<span class="c"># 3. Implement _exec_gpu, modeled after _exec_func, calling self.engine.run_gpu(...)</span></pre>
+      </div>
+
+      <h3 class="sub">Troubleshooting</h3>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>Frontend receives no node info (node_name is empty)</strong><br>The main flow didn't create a top-level <code>ExecutionContext</code>. Ensure <code>run_async</code> is wrapped in <code>with ExecutionContext("__main__"):</code>.</div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>Flow silently exits with no errors</strong><br>Entry inference failed (<code>flow.entry</code> is empty, or all nodes have in-edges). Check whether the workflow explicitly declares a <code>[START]</code> node.</div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>AI calls report <code>no running event loop</code></strong><br>Confirm <code>AsyncEngine</code>'s thread pool is configured with an <code>initializer</code> (to start a background event loop for each thread). This is built-in engine behavior and normally requires no extra config — if this error appears, the engine initialization may have been bypassed.</div>
+      </div>
+      <div class="callout warn">
+        <span class="callout-icon">🔎</span>
+        <div class="callout-body"><strong>All fork branches execute unconditionally</strong><br><code>_run_fork</code> is not evaluating condition edges. Confirm the branch entry collection logic calls <code>self._eval_condition(e.condition)</code> to filter out false conditions.</div>
+      </div>
+
+      <h3 class="sub">Scaling from Single Machine to Distributed</h3>
+      <p>The current architecture already decouples the scheduling layer (<code>FEMORunner</code> / <code>AsyncEngine</code>) from the execution layer (thread pools, process pools), making distributed scaling natural:</p>
+      <ul>
+        <li><strong>Scheduler cluster</strong>: deploy multiple stateless <code>FEMORunner</code> instances behind a load balancer</li>
+        <li><strong>CPU Worker cluster</strong>: route CPU-intensive @func nodes to dedicated Python Workers via Redis Streams or RabbitMQ</li>
+        <li><strong>GPU inference cluster</strong>: call GPU inference nodes via HTTP/gRPC to deployed model services (e.g. vLLM)</li>
+        <li><strong>Human input management</strong>: swap <code>HumanInputManager</code>'s backend to Redis Pub/Sub to support cross-machine input waiting and wake-up</li>
+      </ul>
+    </div>
+
+    <!-- ─── 30 Engine API ─── -->
+    <div class="doc-section" id="sec-engineapi">
+      <span class="section-anchor" id="s-engineapi"></span>
+      <div class="section-header">
+        <span class="section-num">30</span>
+        <h2 class="section-title">AsyncEngine API Reference</h2>
+        <span class="section-badge badge-adv">Dev</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Method / Property</th><th>Purpose</th><th>Notes</th></tr>
+          <tr><td><code>__init__(cpu_workers, thread_workers)</code></td><td>Initialize engine</td><td>Creates process pool, thread pool, and human input manager</td></tr>
+          <tr><td><code>run_in_process(func, *args, **kwargs)</code></td><td>Execute CPU-intensive task</td><td>Submitted to process pool, auto-queued</td></tr>
+          <tr><td><code>run_in_thread(func, *args, **kwargs)</code></td><td>Execute synchronous I/O or regular functions</td><td>Submitted to thread pool (with built-in event loop)</td></tr>
+          <tr><td><code>create_task(coro)</code></td><td>Create a coroutine task</td><td>Used for fork branches; auto-tracked</td></tr>
+          <tr><td><code>gather_with_cancel(tasks, return_when, count)</code></td><td>Wait for multiple tasks</td><td>Supports <code>all</code> / <code>any</code> / <code>n</code> modes</td></tr>
+          <tr><td><code>gather(*coros, return_exceptions)</code></td><td>Concurrently await multiple coroutines</td><td>Wraps <code>asyncio.gather</code></td></tr>
+          <tr><td><code>schedule_threadsafe(callback, *args)</code></td><td>Thread-safe callback</td><td>Pushes a callback from the thread pool back into the event loop</td></tr>
+          <tr><td><code>check_cancel()</code></td><td>Check if current coroutine was cancelled</td><td>Raises <code>CancelledError</code> if cancelled</td></tr>
+          <tr><td><code>shutdown()</code></td><td>Graceful shutdown</td><td>Cancels all tasks, closes thread and process pools</td></tr>
+          <tr><td><code>human_input</code></td><td>Human input manager instance</td><td>Provides <code>wait_for_input</code> and <code>provide_input</code></td></tr>
+        </table>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">Four core design principles: ① VarManager uniformly manages vars and actors — any <code>@xxx</code> is a direct get; ② The <code>@</code> symbol is always preserved, never added or removed; ③ No silent fallbacks — syntax errors, missing config, and undeclared variables always throw errors; ④ Building-block architecture — the engine only collects blocks, not bound to any prompt layout or LLM calling convention.</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<button id="menu-toggle" aria-label="Menu">☰</button>
+
+<script>
+// ── Copy button ──
+document.querySelectorAll('.code-copy').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    }).catch(() => {
+      btn.textContent = 'error';
+      setTimeout(() => { btn.textContent = 'copy'; }, 2000);
+    });
+  });
+});
+
+// ── Scroll reveal ──
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.05, rootMargin: '0px 0px -30px 0px' });
+document.querySelectorAll('.doc-section').forEach(s => revealObserver.observe(s));
+
+// ── Active TOC highlight ──
+const sections = document.querySelectorAll('.section-anchor');
+const tocLinks = document.querySelectorAll('.toc-link');
+
+const tocObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id.replace('s-', '');
+      tocLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#s-' + id);
+      });
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+sections.forEach(s => tocObserver.observe(s));
+
+// ── TOC click smooth scroll ──
+tocLinks.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+      if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+  });
+});
+
+// ── Progress bar ──
+const progressBar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY;
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (scrolled / total * 100) + '%';
+}, { passive: true });
+
+// ── Mobile sidebar ──
+const menuToggle = document.getElementById('menu-toggle');
+const sidebar = document.getElementById('sidebar');
+menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+document.addEventListener('click', e => {
+  if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
+
+// ── Search ──
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  tocLinks.forEach(link => {
+    const text = link.textContent.toLowerCase();
+    link.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.toc-group').forEach(g => {
+    const visibles = [...g.querySelectorAll('.toc-link')].filter(l => l.style.display !== 'none');
+    g.style.display = visibles.length ? '' : 'none';
+  });
+});
+
+// ══════════════════════════════════════════
+// Shared animation utilities
+// ══════════════════════════════════════════
+const A = {
+  bg:     '#1f201e',
+  border: 'rgba(255,255,255,0.07)',
+  gold:   '#c8a84b',
+  gold2:  '#a07e2e',
+  green:  '#6aaa64',
+  blue:   '#79b8d4',
+  purple: '#c586c0',
+  text1:  '#e8e4d8',
+  text2:  '#a89e88',
+  text3:  '#5e5a52',
+
+  lerp(a, b, t) { return a + (b - a) * t; },
+  clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); },
+  ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; },
+
+  node(ctx, x, y, w, h, label, active, color) {
+    ctx.save();
+    ctx.strokeStyle = active ? color : A.text3;
+    ctx.lineWidth   = active ? 1.8 : 1;
+    ctx.globalAlpha = active ? 1 : 0.4;
+    ctx.fillStyle   = active ? 'rgba(255,255,255,0.04)' : 'transparent';
+    const rx = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - w/2 + rx, y - h/2);
+    ctx.lineTo(x + w/2 - rx, y - h/2);
+    ctx.arcTo(x + w/2, y - h/2, x + w/2, y - h/2 + rx, rx);
+    ctx.lineTo(x + w/2, y + h/2 - rx);
+    ctx.arcTo(x + w/2, y + h/2, x + w/2 - rx, y + h/2, rx);
+    ctx.lineTo(x - w/2 + rx, y + h/2);
+    ctx.arcTo(x - w/2, y + h/2, x - w/2, y + h/2 - rx, rx);
+    ctx.lineTo(x - w/2, y - h/2 + rx);
+    ctx.arcTo(x - w/2, y - h/2, x - w/2 + rx, y - h/2, rx);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = active ? color : A.text3;
+    ctx.font = `${active ? 500 : 400} 11px "IBM Plex Mono", monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y);
+    ctx.restore();
+  },
+
+  arrow(ctx, x1, y1, x2, y2, color, alpha) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.globalAlpha = alpha || 0.35;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const al = 7, aw = 3;
+    ctx.fillStyle = color; ctx.globalAlpha = alpha || 0.35;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - al * Math.cos(angle - aw), y2 - al * Math.sin(angle - aw));
+    ctx.lineTo(x2 - al * Math.cos(angle + aw), y2 - al * Math.sin(angle + aw));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  },
+
+  packet(ctx, x, y, color) {
+    ctx.save();
+    ctx.fillStyle = color; ctx.globalAlpha = 0.85;
+    ctx.shadowColor = color; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+};
+
+// ══════════════════════════════════════════
+// FORK animation
+// ══════════════════════════════════════════
+const forkAnim = (() => {
+  const canvas = document.getElementById('canvas-fork');
+  if (!canvas) return { restart() {} };
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  let startTime = null, raf = null;
+  const DUR = 4000;
+
+  const nd = {
+    A:    { x: 80,  y: H/2 },
+    B:    { x: 220, y: H/2 },
+    fork: { x: 320, y: H/2 },
+    vis:  { x: 490, y: H/2 - 60 },
+    solo: { x: 490, y: H/2 + 60 },
+    end:  { x: 650, y: H/2 },
+  };
+
+  function draw(now) {
+    if (!startTime) startTime = now;
+    const t = Math.min((now - startTime) / DUR, 1);
+    ctx.clearRect(0, 0, W, H);
+
+    const phase1 = A.clamp(t / 0.3, 0, 1);
+    const phase2 = A.clamp((t - 0.3) / 0.25, 0, 1);
+    const phase3 = A.clamp((t - 0.55) / 0.35, 0, 1);
+    const phase4 = A.clamp((t - 0.82) / 0.18, 0, 1);
+
+    A.arrow(ctx, nd.A.x+28, nd.A.y, nd.B.x-28, nd.B.y, A.text3, 0.3);
+    A.arrow(ctx, nd.B.x+24, nd.B.y, nd.fork.x-8, nd.fork.y, A.text3, 0.3);
+    A.arrow(ctx, nd.fork.x+8, nd.fork.y, nd.vis.x-32, nd.vis.y, A.blue, 0.25);
+    A.arrow(ctx, nd.fork.x+8, nd.fork.y, nd.solo.x-32, nd.solo.y, A.purple, 0.25);
+    A.arrow(ctx, nd.vis.x+32, nd.vis.y, nd.end.x-28, nd.end.y, A.blue, 0.2);
+    A.arrow(ctx, nd.solo.x+32, nd.solo.y, nd.end.x-28, nd.end.y, A.purple, 0.2);
+
+    A.node(ctx, nd.A.x, nd.A.y, 48, 28, '[A]', t > 0.05, A.text3);
+    A.node(ctx, nd.B.x, nd.B.y, 48, 28, '[B]', t > 0.15, A.text3);
+    A.node(ctx, nd.fork.x, nd.fork.y, 40, 26, 'fork', t > 0.28, A.gold);
+    A.node(ctx, nd.vis.x, nd.vis.y, 72, 26, '[visit]', phase2 > 0.3, A.blue);
+    A.node(ctx, nd.solo.x, nd.solo.y, 64, 26, '[solo]', phase2 > 0.3, A.purple);
+    A.node(ctx, nd.end.x, nd.end.y, 56, 28, '[END]', phase4 > 0.5, A.gold);
+
+    if (phase1 > 0 && phase1 < 1) {
+      const px = A.lerp(nd.A.x + 28, nd.B.x - 28, A.ease(phase1));
+      A.packet(ctx, px, nd.A.y, A.gold);
+    }
+    if (phase2 > 0 && phase2 < 1) {
+      const px1 = A.lerp(nd.fork.x + 8, nd.vis.x - 32, A.ease(phase2));
+      const py1 = A.lerp(nd.fork.y, nd.vis.y, A.ease(phase2));
+      A.packet(ctx, px1, py1, A.blue);
+      const px2 = A.lerp(nd.fork.x + 8, nd.solo.x - 32, A.ease(phase2));
+      const py2 = A.lerp(nd.fork.y, nd.solo.y, A.ease(phase2));
+      A.packet(ctx, px2, py2, A.purple);
+    }
+    if (phase3 > 0 && phase3 < 1) {
+      const e = A.ease(phase3);
+      A.packet(ctx, A.lerp(nd.vis.x-24, nd.vis.x+24, e), nd.vis.y, A.blue);
+      A.packet(ctx, A.lerp(nd.solo.x-24, nd.solo.x+24, e), nd.solo.y, A.purple);
+    }
+    if (phase4 > 0) {
+      const e = A.ease(A.clamp(phase4, 0, 1));
+      A.packet(ctx, A.lerp(nd.vis.x+32, nd.end.x-28, e), A.lerp(nd.vis.y, nd.end.y, e), A.blue);
+      A.packet(ctx, A.lerp(nd.solo.x+32, nd.end.x-28, e), A.lerp(nd.solo.y, nd.end.y, e), A.purple);
+    }
+
+    ctx.save();
+    ctx.fillStyle = A.gold; ctx.globalAlpha = 0.5;
+    ctx.font = '10px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('fork', nd.fork.x, nd.fork.y - 20);
+    ctx.restore();
+
+    if (t < 1) raf = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (raf) cancelAnimationFrame(raf);
+    startTime = null; raf = requestAnimationFrame(draw);
+  }
+
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { start(); obs.disconnect(); }
+  }, { threshold: 0.3 });
+  obs.observe(canvas);
+  return { restart: start };
+})();
+
+// ══════════════════════════════════════════
+// FOR animation
+// ══════════════════════════════════════════
+const forAnim = (() => {
+  const canvas = document.getElementById('canvas-for');
+  if (!canvas) return { restart() {} };
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  let startTime = null, raf = null;
+  const ITEMS = ['@p1','@p2','@p3'];
+  const DUR = 4200;
+
+  const nd = {
+    pre:  { x:60,  y:H/2, label:'[B]' },
+    c:    { x:220, y:H/2, label:'[C]' },
+    d:    { x:370, y:H/2, label:'[D]' },
+    end:  { x:560, y:H/2, label:'[END]' },
+  };
+
+  function draw(now) {
+    if (!startTime) startTime = now;
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / DUR, 1);
+    ctx.clearRect(0, 0, W, H);
+
+    A.arrow(ctx, nd.pre.x+28, nd.pre.y, nd.c.x-28, nd.c.y, A.text3, 0.35);
+    A.arrow(ctx, nd.c.x+28,  nd.c.y,   nd.d.x-28, nd.d.y, A.text3, 0.35);
+    A.arrow(ctx, nd.d.x+28,  nd.d.y,   nd.end.x-40, nd.end.y, A.text3, 0.35);
+
+    ctx.save();
+    ctx.setLineDash([3,4]);
+    ctx.strokeStyle = A.gold2; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(nd.d.x, nd.d.y+14);
+    ctx.bezierCurveTo(nd.d.x, nd.d.y+48, nd.c.x, nd.d.y+48, nd.c.x, nd.c.y+14);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    A.node(ctx, nd.pre.x, nd.pre.y, 48, 28, '[B]',    true,  A.text3);
+    A.node(ctx, nd.c.x,   nd.c.y,   48, 28, '[C]',    false, A.text3);
+    A.node(ctx, nd.d.x,   nd.d.y,   48, 28, '[D]',    false, A.text3);
+    A.node(ctx, nd.end.x, nd.end.y, 56, 28, '[END]',  false, A.text3);
+
+    const iterDur = 0.26;
+    const iterStart = 0.08;
+    ITEMS.forEach((item, i) => {
+      const it0 = iterStart + i * iterDur;
+      if (t < it0) return;
+      const it = A.clamp((t - it0) / iterDur, 0, 1);
+
+      const atC = it < 0.45;
+      const atD = it >= 0.45 && it < 0.85;
+      if (atC) A.node(ctx, nd.c.x, nd.c.y, 48, 28, '[C]', true, A.blue);
+      if (atD) A.node(ctx, nd.d.x, nd.d.y, 48, 28, '[D]', true, A.blue);
+
+      let px, py;
+      if (it < 0.45) {
+        const pt = it / 0.45;
+        px = A.lerp(nd.c.x-24, nd.c.x+24, pt);
+        py = nd.c.y;
+      } else if (it < 0.85) {
+        const pt = (it-0.45)/0.4;
+        px = A.lerp(nd.d.x-24, nd.d.x+24, pt);
+        py = nd.d.y;
+      } else {
+        const isLast = i === ITEMS.length-1;
+        if (isLast) {
+          const pt = (it-0.85)/0.15;
+          px = A.lerp(nd.d.x+24, nd.end.x-28, pt);
+          py = nd.end.y;
+        } else {
+          const pt = (it-0.85)/0.15;
+          px = A.lerp(nd.d.x, nd.c.x, pt);
+          py = nd.d.y + Math.sin(pt*Math.PI)*34;
+        }
+      }
+      A.packet(ctx, px, py, A.blue);
+
+      ctx.save();
+      ctx.fillStyle = A.text2; ctx.globalAlpha = 0.8;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`iter ${i+1}: ${item}`, 10, 18 + i*16);
+      ctx.restore();
+    });
+
+    if (t > iterStart + ITEMS.length * iterDur) {
+      A.node(ctx, nd.end.x, nd.end.y, 56, 28, '[END]', true, A.gold);
+      ctx.save();
+      ctx.fillStyle = A.gold; ctx.globalAlpha = 0.7;
+      ctx.font = '11px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('loop done →', nd.end.x, nd.end.y + 28);
+      ctx.restore();
+    }
+
+    if (t < 1) raf = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (raf) cancelAnimationFrame(raf);
+    startTime = null;
+    raf = requestAnimationFrame(draw);
+  }
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { start(); obs.disconnect(); }
+  }, { threshold: 0.3 });
+  obs.observe(canvas);
+  return { restart: start };
+})();
+
+// ══════════════════════════════════════════
+// PAR animation
+// ══════════════════════════════════════════
+const parAnim = (() => {
+  const canvas = document.getElementById('canvas-par');
+  if (!canvas) return { restart() {} };
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  let startTime = null, raf = null;
+  const DUR = 4000;
+
+  const WORKERS = [
+    { label:'@coder1', color: A.blue   },
+    { label:'@coder2', color: A.green  },
+    { label:'@coder3', color: A.purple },
+  ];
+  const rowH = H / (WORKERS.length + 1);
+  const preX = 70, writeX = 240, tryX = 390, endX = 560;
+
+  function draw(now) {
+    if (!startTime) startTime = now;
+    const t = Math.min((now - startTime) / DUR, 1);
+    ctx.clearRect(0, 0, W, H);
+
+    const preY = H/2;
+    A.node(ctx, preX, preY, 64, 28, '[START]', t>0.05, A.gold);
+
+    WORKERS.forEach((w, i) => {
+      const y = (i+1) * rowH;
+      const alpha = A.clamp((t-0.15)/0.15, 0, 1);
+      A.arrow(ctx, preX+32, preY, writeX-32, y, w.color, alpha*0.35);
+    });
+
+    WORKERS.forEach((w, i) => {
+      const y = (i+1) * rowH;
+      const lt = A.clamp((t - 0.22) / 0.65, 0, 1);
+
+      A.arrow(ctx, writeX+32, y, tryX-32, y, A.text3, 0.25);
+
+      const atWrite = lt > 0 && lt < 0.5;
+      const atTry   = lt >= 0.5 && lt < 0.95;
+      const done    = lt >= 0.95;
+      A.node(ctx, writeX, y, 64, 26, 'write', atWrite, w.color);
+      A.node(ctx, tryX,   y, 64, 26, 'try',   atTry,   w.color);
+
+      if (lt > 0 && lt < 1) {
+        let px, py = y;
+        if (lt < 0.5) {
+          px = A.lerp(writeX-32, writeX+32, lt/0.5);
+        } else {
+          px = A.lerp(tryX-32, tryX+32, (lt-0.5)/0.45);
+        }
+        A.packet(ctx, px, py, w.color);
+      }
+
+      ctx.save();
+      ctx.fillStyle = w.color; ctx.globalAlpha = 0.75;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(w.label, writeX-36, y+1);
+      ctx.restore();
+
+      if (done) {
+        const pt = A.clamp((lt-0.95)/0.05, 0, 1);
+        A.arrow(ctx, tryX+32, y, endX-28, preY, w.color, pt*0.5);
+      }
+    });
+
+    const allDone = A.clamp((t-0.9)/0.1, 0, 1);
+    A.node(ctx, endX, preY, 56, 28, '[D]', allDone>0.5, A.gold);
+    if (allDone > 0.5) {
+      ctx.save();
+      ctx.fillStyle = A.gold; ctx.globalAlpha = allDone * 0.7;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('all merged', endX, preY+26);
+      ctx.restore();
+    }
+
+    if (t < 1) raf = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    if (raf) cancelAnimationFrame(raf);
+    startTime = null;
+    raf = requestAnimationFrame(draw);
+  }
+  const obs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { start(); obs.disconnect(); }
+  }, { threshold: 0.3 });
+  obs.observe(canvas);
+  return { restart: start };
+})();
+</script>
+</body>
+</html>

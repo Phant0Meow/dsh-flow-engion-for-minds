@@ -1,0 +1,61 @@
+meta:
+  name = for-exit-verify
+  session = new
+
+actors:
+  ai @主厨
+  ai @帮厨A
+  ai @帮厨B
+
+vars:
+  @厨师 = ""
+  steps = 0
+  good_hits = 0
+
+action 开场 @assign:
+  out:
+    steps += 1
+
+action 构思 @assign:
+  out:
+    steps += 1
+
+action 提案 @assign:
+  out:
+    steps += 1
+
+action 评审 @assign:
+  out:
+    good_hits += 1
+
+action 颁奖 @assign:
+  out:
+    steps += 100
+
+action 感言 @assign:
+  out:
+    steps += 1
+
+action 定稿 @assign:
+  out:
+    steps += 10
+
+mainflow:
+  [START] -> 开场 -> [round]
+
+  [round] -> par @厨师 in [@帮厨A, @帮厨B]:
+    -> 构思 ->
+  -> [pitch]
+
+  [pitch] -> for @厨师 in [@帮厨A, @帮厨B]:
+    -> 提案 ->
+  -> [judge]:评审
+
+  [judge] -> if (good_hits == 1) -> 颁奖 -> [speech]
+  [judge] -> if (good_hits == 999) -> [round]
+
+  [speech] -> for @厨师 in [@帮厨A, @帮厨B]:
+    -> 感言 ->
+  -> [final]:定稿
+
+  [final] -> [END]

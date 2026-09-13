@@ -1,0 +1,15 @@
+meta:
+  name = 工具轮 cot 测试
+  session = new
+
+actors:
+  ai @Eve = soul:the1stlittlesoul
+
+action readfile @ai(@Eve):
+  prompt: |
+    请使用 read 工具读取文件 D:/myFiles/fe4m/README.md 的第一行内容，
+    然后用中文告诉我文件标题是什么。先思考要做什么，再调用工具。
+  scope: [@Eve]
+
+mainflow:
+  [START] -> readfile -> [END]

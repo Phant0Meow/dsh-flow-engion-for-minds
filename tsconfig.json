@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "types": ["node", "react"],
+    "typeRoots": [
+      "node_modules/@types",
+      "D:/myFiles/dsh/dsh-meow0.1.1-rc.2/node_modules/.pnpm/@types+react@18.3.31/node_modules/@types",
+      "D:/myFiles/dsh/dsh-meow0.1.1-rc.2/node_modules/.pnpm/@types+node@22.20.0/node_modules/@types"
+    ]
+  },
+  "include": ["hostAdapter"]
+}

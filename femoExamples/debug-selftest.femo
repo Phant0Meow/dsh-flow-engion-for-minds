@@ -1,0 +1,22 @@
+﻿meta:
+  name = 调试器自测-概率与重试
+  session = new
+
+vars:
+  choice = ""
+  asked = 0
+
+actors:
+  ai @bot = soul:AI助手
+
+action ask @ai(@bot):
+  prompt: |
+    请选择一个选项，输出 SET VARIABLE: <<choice = 选项>>，选项可以是 勇气 或 智慧。
+  out: choice(string, "选择")
+  max_retries: 2
+
+action count_ask @assign:
+  out: asked += 1
+
+mainflow:
+  [START] -> count_ask -> ask -> [END]

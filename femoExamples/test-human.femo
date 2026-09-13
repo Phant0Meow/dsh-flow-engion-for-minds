@@ -1,0 +1,12 @@
+meta:
+  name = human 节点测试
+  session = new
+
+actors:
+  human @我 = soul:0, source:001
+
+action ask @human(@我):
+  prompt: 请说点什么，然后流程继续
+
+mainflow:
+  [START] -> ask -> [END]

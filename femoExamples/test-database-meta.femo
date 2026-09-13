@@ -1,0 +1,14 @@
+meta:
+  name = database 字段回归测试
+  session = new
+  database = file:"data/world.db"
+
+vars:
+  msg = "ok"
+
+action set_msg @assign:
+  out:
+    msg = "database 字段不再炸"
+
+mainflow:
+  [START] -> set_msg -> [END]

@@ -1,0 +1,70 @@
+﻿# 议题讨论会：for 轮番讨论 → 赋值判断 → par 独立探索（scope 分离）→ 汇报 → 人类拍板
+meta:
+  name = 议题讨论会
+  session = new
+
+actors:
+  ai @主持人 = soul:the1stlittlesoul, tools: true
+  ai @研究员A = soul:littlecat, tools: true
+  ai @研究员B = soul:AI助手, tools: true
+  human @用户 = soul:human, source:0
+
+vars:
+  @speaker = ""
+  agree = false
+  通过 = false
+  AImembers = [@主持人, @研究员A, @研究员B]
+
+action 开场 @ai(@主持人):
+  prompt: |
+    你是讨论会主持人。今天的议题：国际原油会涨还是会跌？
+    你手下有两位研究员{@研究员A}和{@研究员B}，你给他们安排任务，让他们各自侧重一个方面去做调研。
+  showprompt: "【主持人】今天的议题：国际原油会涨还是会跌？"
+  scope: AImembers
+
+action 调查 @ai(@speaker):
+  prompt: "你是{@speaker}。请你进行多轮网络搜索，获取你所侧重的方面的信息。"
+  scope: @speaker  #调查的过程只有他自己看见
+
+action 发言 @ai(@speaker):
+  prompt: "你是{@speaker}。请你向大家汇报你搜集到的信息和结论。"
+  scope: AImembers
+
+action 判断 @ai(@主持人):
+  prompt: |
+    综合两位研究员的发言，分析他们是否达成一致，差异点在哪。
+    最后输出变量赋值：
+    如果他们达成一致，你输出：SET VARIABLE: <<agree = true>>
+    如果他们仍有分歧，你输出：SET VARIABLE: <<agree = false>>
+  scope: AImembers
+  out: agree(bool, "是否达成一致")
+
+action 汇总 @ai(@主持人):
+  prompt: |
+    整合两份研究报告，向用户汇报最终方案。
+    清晰说明两个视角的发现与你的综合结论。
+  scope: all   # all为scope保留字段，剧本中所有actors都可见。
+
+action 拍板 @human(@用户):
+  prompt: "你批准这个最终方案吗？"
+  showprompt: "人类用户请拍板：批准 / 驳回"
+  scope: all
+  out: 通过(bool, "是否批准")
+
+mainflow:
+  [START] -> 开场 -> [pos]       # 不指定action的节点为空节点，空节点名字随意
+
+  [pos] -> par @speaker in [@研究员A, @研究员B]:  # 两个研究员并行各自调查
+    -> 调查 ->
+  -> [准备发言]
+
+  [准备发言] -> for @speaker in [@研究员A, @研究员B]:  # 串行发言，进行讨论
+    -> 发言 ->
+  -> [judge]:判断
+
+  [judge] -> if (agree == true) -> 汇总 -> [final]:拍板
+  [judge] -> if (agree == false) -> [pos]     # 有分歧：回并行搜索（不重播开场）
+    # 循环必须指向之前的节点，空节点也可以。但不能指向action名，指向action是重复运行第二遍这个action，不是循环。
+
+  [final] -> if (通过 == true) -> [END]
+  [final] -> if (通过 == false) -> [START]      # 人类驳回：重新调查一轮（重播开场，但主持人看得见之前的上下文，他会重新分配任务）

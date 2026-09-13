@@ -1,0 +1,78 @@
+﻿# 斯坦福小镇：角色用 add/remove 移动位置，scope 按地点动态隔离
+meta:
+  name = 斯坦福小镇
+  session = new
+
+actors:
+  ai @阿明 = soul:the1stlittlesoul
+  ai @阿芳 = soul:littlecat
+  ai @阿强 = soul:AI助手
+  human @玩家 = soul:human, source:0   # source:0 = 卸掉管理员视角，只作为玩家看到角色视角内的对话
+
+code:
+  WAIT = file:"random_wait_time.py"
+
+vars:
+  在酒馆的人 = [@阿明, @玩家]
+  在公园的人 = [@阿芳]
+  在市场的人 = [@阿强]
+  @speaker = ""
+  居民 = [@阿明, @阿芳, @阿强, @玩家]
+  _wait = 0
+
+action 随机等一会儿 @func(WAIT.random_interval):
+  out: _wait
+
+action 酒馆闲聊 @mind(@speaker):
+  prompt: |
+    你是{@speaker}，此刻在酒馆。你可以和其他在酒馆的人闲聊。
+    想去其他地方就输出两条赋值（例如去公园）：
+    SET VARIABLE: <<在酒馆的人 = remove({@speaker})>>
+    SET VARIABLE: <<在公园的人 = add({@speaker})>>
+    不移动就不要输出赋值。
+  showprompt: "【酒馆】{@speaker} 在说话"
+  scope: 在酒馆的人
+  out: 在酒馆的人, 在公园的人, 在市场的人
+
+action 公园闲聊 @mind(@speaker):
+  prompt: |
+    你是{@speaker}，此刻在公园。你可以和其他在公园的人闲聊。
+    想去其他地方就输出两条赋值（例如去市场）：
+    SET VARIABLE: <<在公园的人 = remove({@speaker})>>
+    SET VARIABLE: <<在市场的人 = add({@speaker})>>
+    不移动就不要输出赋值。
+  showprompt: "【公园】{@speaker} 在说话"
+  scope: 在公园的人
+  out: 在酒馆的人, 在公园的人, 在市场的人
+
+action 市场闲聊 @mind(@speaker):
+  prompt: |
+    你是{@speaker}，此刻在市场。你可以和其他在市场的人闲聊。
+    想去其他地方就输出两条赋值（例如回酒馆）：
+    SET VARIABLE: <<在市场的人 = remove({@speaker})>>
+    SET VARIABLE: <<在酒馆的人 = add({@speaker})>>
+    不移动就不要输出赋值。
+  showprompt: "【市场】{@speaker} 在说话"
+  scope: 在市场的人
+  out: 在酒馆的人, 在公园的人, 在市场的人
+
+mainflow:
+  # 每条线回自己的空节点锚点（不能回多出边节点：每次回到多出边节点会从一变成多分支，分支数爆炸——编译期会报错提示）
+  [START] -> fork:
+      -> [酒馆环]
+      -> [公园环]
+      -> [市场环]
+  [酒馆环] -> par @speaker in 在酒馆的人:
+      -> if (@speaker.type == "ai") -> 随机等一会儿 -> 酒馆闲聊 ->
+      -> if (@speaker.type == "human") -> 酒馆闲聊 ->
+  -> [酒馆环]
+  [公园环] -> par @speaker in 在公园的人:
+      -> if (@speaker.type == "ai") -> 随机等一会儿 -> 公园闲聊 ->
+      -> if (@speaker.type == "human") -> 公园闲聊 ->
+  -> [公园环]
+  [市场环] -> par @speaker in 在市场的人:
+      -> if (@speaker.type == "ai") -> 随机等一会儿 -> 市场闲聊 ->
+      -> if (@speaker.type == "human") -> 市场闲聊 ->
+  -> [市场环]
+
+

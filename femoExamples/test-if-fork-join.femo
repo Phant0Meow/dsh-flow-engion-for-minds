@@ -1,0 +1,32 @@
+meta:
+  name = 语法测试1-条件分支与合并
+  session = new
+
+vars:
+  score = 7
+  big = false
+  small = false
+  note = ""
+
+action mark_big @assign:
+  out:
+    big = true
+    note = "big"
+
+action mark_small @assign:
+  out:
+    small = true
+    note = "small"
+
+action finish @assign:
+  out:
+    note = note + "+done"
+
+mainflow:
+  [START] -> [GO] -> fork:
+    -> if (score > 5) -> [BIG]:mark_big
+    -> if (score <= 5) -> [SMALL]:mark_small
+  join(all):
+    [BIG] ->
+    [SMALL] ->
+  to [DONE]:finish -> [END]
