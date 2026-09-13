@@ -108,7 +108,7 @@ Aha, how about trying femo to quickly validate your Agent Harness flow designs? 
 ## [Quick Start!]
 So, are these steps brainless enough? ↓↓↓
 
-Prerequisite: **dsh (DeepSeek Harness) 0.1.5 or newer** — zero-config integration; older dsh versions are not supported.
+Prerequisite: **dsh (DeepSeek Harness) 0.1.5 or newer** — zero-config integration; older dsh versions need manual modifications (see the `dshPatch/` directory).
 
 1. Install the plugin (auto-compiles on install; takes effect after restarting dsh web):
 
@@ -328,7 +328,7 @@ femo有网页端零代码生成工作流。比如你想要好几个AI群聊，�
 ## 【快速开始！】 
 所以这个操作步骤够不够无脑？↓↓↓
 
-前置要求：**dsh（DeepSeek Harness）0.1.5 及以上**——零改动直接接入；更低版本 dsh 不支持。
+前置要求：**dsh（DeepSeek Harness）0.1.5 及以上**——零改动直接接入；更低版本 dsh 需自行改动（见 `dshPatch/` 目录）。
 
 1. 一条命令装插件（安装时自动编译，装完重启 dsh web 生效）：
 
